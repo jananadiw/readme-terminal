@@ -10,9 +10,15 @@ export interface StampPosition {
   y: number;
 }
 
+export interface StampConfig {
+  src: string;
+  position: StampPosition;
+  rotation: number;
+  size: number;
+}
+
 export interface StampPositions {
-  japan: StampPosition;
-  lanka: StampPosition;
+  stamps: StampConfig[];
 }
 
 export interface TerminalState {

@@ -21,12 +21,13 @@ export function useTerminal(whoamiContent: string) {
     const output = processCommand(
       value,
       whoamiContent,
-      <WelcomeMessage />,
+      <WelcomeMessage hasOutput />,
       setHistory
     );
 
     setHistory((h) => [
-      ...h,
+      { type: "output", content: <WelcomeMessage hasOutput /> },
+      ...h.slice(1),
       { type: "input", content: value },
       ...(output ? [{ type: "output" as const, content: output }] : []),
     ]);

@@ -6,8 +6,8 @@ export const COLORS = {
   accent3: "#4682B4",
   accent4: "#366899",
   yellow: "#FFCC00",
-  background: "#E8E0D0",
-  terminalBg: "#F5F1E8",
+  background: "#F9F9F7",
+  terminalBg: "#FCFCFA",
   border: "#D4C5A9",
   textPrimary: "#3E3326",
   textSecondary: "#9B8B75",
@@ -36,3 +36,4 @@ export const TERMINAL_CONFIG = {
   height: "h-[600px]",
   title: "jw — bash",
 } as const;
+

@@ -18,7 +18,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inconsolata.className} antialiased`}>
+      <body
+        className={`${inconsolata.className} antialiased`}
+        suppressHydrationWarning
+      >
         {children}
       </body>
     </html>
