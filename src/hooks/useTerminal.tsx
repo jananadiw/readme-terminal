@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import { useState, useRef, useEffect } from "react";
 import { HistoryItem } from "@/lib/types";
 import { processCommand } from "@/lib/commands";
 import WelcomeMessage from "@/components/organisms/WelcomeMessage";
@@ -8,11 +8,14 @@ export function useTerminal(whoamiContent: string) {
     { type: "output", content: <WelcomeMessage /> },
   ]);
   const [input, setInput] = useState("");
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Scroll only the terminal output container, not the viewport
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
   }, [history]);
 
   const handleSubmit = (value: string = input) => {
@@ -39,7 +42,7 @@ export function useTerminal(whoamiContent: string) {
     input,
     setInput,
     handleSubmit,
-    bottomRef,
+    scrollRef,
     inputRef,
   };
 }

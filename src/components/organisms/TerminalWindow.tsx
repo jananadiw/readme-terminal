@@ -1,4 +1,5 @@
 import { RefObject } from "react";
+import { DragControls } from "framer-motion";
 import { HistoryItem } from "@/lib/types";
 import { TERMINAL_CONFIG, SUGGESTIONS } from "@/lib/constants";
 import TerminalTitleBar from "../molecules/TerminalTitleBar";
@@ -13,7 +14,9 @@ interface TerminalWindowProps {
   onSubmit: () => void;
   onSuggestionClick: (suggestion: string) => void;
   inputRef: RefObject<HTMLInputElement | null>;
-  bottomRef: RefObject<HTMLDivElement | null>;
+  scrollRef: RefObject<HTMLDivElement | null>;
+  onMinimize: () => void;
+  dragControls: DragControls;
 }
 
 export default function TerminalWindow({
@@ -23,15 +26,21 @@ export default function TerminalWindow({
   onSubmit,
   onSuggestionClick,
   inputRef,
-  bottomRef,
+  scrollRef,
+  onMinimize,
+  dragControls,
 }: TerminalWindowProps) {
   return (
     <div
-      className={`w-full ${TERMINAL_CONFIG.maxWidth} ${TERMINAL_CONFIG.height} bg-[#f3f3f0]/90 rounded-xl shadow-2xl flex flex-col overflow-hidden border border-[#D4C5A9] relative`}
+      className={`${TERMINAL_CONFIG.maxWidth} ${TERMINAL_CONFIG.width} ${TERMINAL_CONFIG.height} bg-[#f3f3f0]/90 rounded-xl shadow-2xl flex flex-col overflow-hidden border border-[#D4C5A9] relative`}
       onClick={() => inputRef.current?.focus()}
     >
-      <TerminalTitleBar title={TERMINAL_CONFIG.title} />
-      <TerminalOutput history={history} bottomRef={bottomRef} />
+      <TerminalTitleBar
+        title={TERMINAL_CONFIG.title}
+        onMinimize={onMinimize}
+        dragControls={dragControls}
+      />
+      <TerminalOutput history={history} scrollRef={scrollRef} />
       <TerminalInput
         value={input}
         onChange={onInputChange}

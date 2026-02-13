@@ -7,7 +7,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANT_CLASSES = {
   suggestion:
-    "px-3 py-1.5 bg-[#E8E0D0] hover:bg-[#DDD3BF] border border-[#D4C5A9] rounded-full text-sm text-[#6B5D4F] hover:text-[#3E3326] transition-colors",
+    "px-3 py-1.5 bg-[#E8E0D0] hover:bg-[#DDD3BF] border border-[#D4C5A9] rounded-full text-base text-[#6B5D4F] hover:text-[#3E3326] transition-colors",
   primary:
     "px-4 py-2 bg-[#2E6F40] hover:bg-[#366899] text-white rounded transition-colors",
   ghost:

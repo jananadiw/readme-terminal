@@ -5,6 +5,6 @@ interface ColoredTextProps {
   color?: string;
 }
 
-export default function ColoredText({ children, color = "#FA5053" }: ColoredTextProps) {
+export default function ColoredText({ children, color = "#35373a" }: ColoredTextProps) {
   return <span style={{ color }}>{children}</span>;
 }

@@ -4,19 +4,18 @@ import { RefObject } from "react";
 
 interface TerminalOutputProps {
   history: HistoryItemType[];
-  bottomRef: RefObject<HTMLDivElement | null>;
+  scrollRef: RefObject<HTMLDivElement | null>;
 }
 
 export default function TerminalOutput({
   history,
-  bottomRef,
+  scrollRef,
 }: TerminalOutputProps) {
   return (
-    <div className="flex-1 overflow-y-auto p-5 space-y-2 text-sm">
+    <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-2 text-base">
       {history.map((item, i) => (
         <HistoryItem key={i} item={item} />
       ))}
-      <div ref={bottomRef} />
     </div>
   );
 }
