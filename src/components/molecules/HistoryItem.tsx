@@ -6,7 +6,7 @@ interface HistoryItemProps {
 }
 
 export default function HistoryItem({ item }: HistoryItemProps) {
-  const className = item.type === "input" ? "text-[#9B8B75]" : "text-[#3E3326]";
+  const className = item.type === "input" ? "text-[#9B8B75]" : "text-[#35373a]";
 
   return (
     <div className={className}>

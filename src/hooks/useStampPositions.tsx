@@ -74,6 +74,7 @@ const STAMP_IMAGES = [
   { src: "/japsalttoek.png", size: 180 },
   { src: "/malta.png", size: 200 },
   { src: "/WienLib.png", size: 240 },
+  { src: "/shanghai.png", size: 240 },
 ];
 
 // Simple pseudo-random number generator for deterministic results
@@ -104,7 +105,7 @@ export function useStampPositions() {
     let imageIndex = 0;
 
     // Safety break to prevent infinite loops
-    const MAX_SEARCH = 1000; 
+    const MAX_SEARCH = 1000;
 
     while (imageIndex < STAMP_IMAGES.length && count < MAX_SEARCH) {
       count++;
@@ -156,4 +157,3 @@ export function useStampPositions() {
 
 // Canvas dimensions for centering
 export const CANVAS_CENTER = { x: CX, y: CY };
-

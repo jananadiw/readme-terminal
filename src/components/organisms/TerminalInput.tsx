@@ -7,6 +7,7 @@ interface TerminalInputProps {
   onChange: (value: string) => void;
   onSubmit: () => void;
   inputRef: RefObject<HTMLInputElement | null>;
+  disabled?: boolean;
 }
 
 export default function TerminalInput({
@@ -14,9 +15,10 @@ export default function TerminalInput({
   onChange,
   onSubmit,
   inputRef,
+  disabled,
 }: TerminalInputProps) {
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !disabled) {
       onSubmit();
     }
   };
@@ -30,7 +32,8 @@ export default function TerminalInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Type a command..."
+        placeholder={disabled ? "Thinking..." : "Type a command..."}
+        disabled={disabled}
         autoFocus
       />
     </div>

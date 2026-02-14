@@ -17,6 +17,7 @@ interface TerminalWindowProps {
   scrollRef: RefObject<HTMLDivElement | null>;
   onMinimize: () => void;
   dragControls: DragControls;
+  streaming?: boolean;
 }
 
 export default function TerminalWindow({
@@ -29,6 +30,7 @@ export default function TerminalWindow({
   scrollRef,
   onMinimize,
   dragControls,
+  streaming,
 }: TerminalWindowProps) {
   return (
     <div
@@ -46,6 +48,7 @@ export default function TerminalWindow({
         onChange={onInputChange}
         onSubmit={onSubmit}
         inputRef={inputRef}
+        disabled={streaming}
       />
       <SuggestionBar
         suggestions={SUGGESTIONS}

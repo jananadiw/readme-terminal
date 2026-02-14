@@ -20,8 +20,8 @@ export function processCommand(
   }
 
   if (trimmed === "/whoami") {
-    return `<span class="text-[#FA766E]">${whoamiContent || "Loading..."}</span>`;
+    return `<span class="text-[#35373a]">${whoamiContent || "Loading..."}</span>`;
   }
 
-  return `<span class="text-[#FFCC00]">Coming soon:</span> LLM responses for "${cmd}"`;
+  return "__LLM__";
 }

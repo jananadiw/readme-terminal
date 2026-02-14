@@ -64,7 +64,7 @@ export default function DraggableStamp({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.85, y: -4 }}
             transition={{ duration: 0.15 }}
-            className="absolute left-1/2 -translate-x-1/2 mt-2 px-4 py-2 bg-[#FF6B35] text-white text-sm font-[Inconsolata] whitespace-nowrap rounded-lg border-2 border-white shadow-[0_4px_12px_rgba(0,0,0,0.25)] pointer-events-none"
+            className="absolute left-1/2 -translate-x-1/2 mt-2 px-4 py-2 bg-[#FF6B35] text-white text-sm font-[Inconsolata] whitespace-nowrap rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.25)] pointer-events-none"
           >
             {tooltip}
           </motion.div>

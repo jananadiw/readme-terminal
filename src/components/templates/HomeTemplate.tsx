@@ -12,7 +12,7 @@ import TerminalWindow from "@/components/organisms/TerminalWindow";
 export default function HomeTemplate() {
   const { content: whoamiContent } = useWhoami();
   const { stampPositions } = useStampPositions();
-  const { history, input, setInput, handleSubmit, scrollRef, inputRef } =
+  const { history, input, setInput, handleSubmit, scrollRef, inputRef, streaming } =
     useTerminal(whoamiContent);
 
   // Canvas panning state — start at 0, then center on mount (avoids hydration mismatch)
@@ -154,6 +154,7 @@ export default function HomeTemplate() {
                 scrollRef={scrollRef}
                 onMinimize={() => setMinimized(true)}
                 dragControls={dragControls}
+                streaming={streaming}
               />
             </motion.div>
           ) : (
