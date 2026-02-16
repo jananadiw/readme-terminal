@@ -11,7 +11,7 @@ export function processCommand(
   const trimmed = cmd.trim().toLowerCase();
 
   if (trimmed === "clear") {
-    setHistory([{ type: "output", content: WelcomeMessageComponent }]);
+    setHistory(() => [{ type: "output", content: WelcomeMessageComponent }]);
     return;
   }
 

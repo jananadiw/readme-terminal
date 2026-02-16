@@ -122,7 +122,7 @@ export default function HomeTemplate() {
       </motion.div>
 
       {/* Terminal overlay – draggable & minimizable */}
-      <div className="absolute inset-0 pointer-events-none z-50">
+      <div className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center">
         <AnimatePresence mode="wait">
           {!minimized ? (
             <motion.div
@@ -133,15 +133,17 @@ export default function HomeTemplate() {
               dragMomentum={false}
               dragElastic={0}
               dragConstraints={constraintsRef}
-              initial={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
-              animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
-              exit={{ opacity: 0, scale: 0.9, x: "-50%", y: "-50%" }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className="pointer-events-auto absolute"
-              style={{
-                left: "50%",
-                top: "50%",
+              initial={{ opacity: 0, scale: 0.15, borderRadius: "16px" }}
+              animate={{ opacity: 1, scale: 1, borderRadius: "0px" }}
+              exit={{ opacity: 0, scale: 0.15, borderRadius: "16px" }}
+              transition={{
+                type: "spring",
+                stiffness: 280,
+                damping: 24,
+                mass: 0.9,
               }}
+              style={{ transformOrigin: "bottom center" }}
+              className="pointer-events-auto"
               data-terminal
             >
               <TerminalWindow
@@ -160,10 +162,14 @@ export default function HomeTemplate() {
           ) : (
             <motion.div
               key="minimized-bar"
-              initial={{ opacity: 0, y: 20, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.9 }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              initial={{ opacity: 0, scale: 0.5, y: -20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.5, y: -20 }}
+              transition={{
+                type: "spring",
+                stiffness: 350,
+                damping: 28,
+              }}
               className="pointer-events-auto fixed bottom-6 left-1/2 -translate-x-1/2 cursor-pointer"
               onClick={() => setMinimized(false)}
             >
