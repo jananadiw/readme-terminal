@@ -2,9 +2,8 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 export async function POST(req: Request) {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const { question } = await req.json();
   const context = readFileSync(join(process.cwd(), "whoami.md"), "utf-8");
 
