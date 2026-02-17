@@ -7,7 +7,7 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4-38bdf8.svg)](https://tailwindcss.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6.svg)](https://www.typescriptlang.org/)
 
-![Preview](Preview.png)
+![Preview](public/Preview.png)
 
 > An interactive portfolio terminal built as a pannable canvas with draggable photo stamps and an AI-powered chat interface.
 
