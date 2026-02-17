@@ -2,66 +2,40 @@
 
 body {
   background: #f3f3f0;
-  /* Triptych background - commented out
-  background:
-    linear-gradient(to right,
-      transparent 0%,
-      transparent 33.33%,
-      rgba(0, 0, 0, 0.05) 33.33%,
-      rgba(0, 0, 0, 0.05) 33.43%,
-      transparent 33.43%,
-      transparent 66.66%,
-      rgba(0, 0, 0, 0.05) 66.66%,
-      rgba(0, 0, 0, 0.05) 66.76%,
-      transparent 66.76%,
-      transparent 100%
-    ),
-    url('/coffee.png') left center / 33.33% 100% no-repeat,
-    url('/updown.png') center center / 33.33% 100% no-repeat,
-    url('/hike.png') right center / 33.33% 100% no-repeat,
-    #1a1a1a;
-  background-attachment: fixed;
-  position: relative;
-  */
 }
 
-/* Film grain effect - commented out
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background:
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(255, 255, 255, 0.015) 2px,
-      rgba(255, 255, 255, 0.015) 4px
-    );
-  pointer-events: none;
-  z-index: 1;
+/* Smooth terminal scrolling */
+.terminal-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
-
-body > * {
-  position: relative;
-  z-index: 2;
+.terminal-scroll::-webkit-scrollbar {
+  width: 5px;
 }
-*/
+.terminal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.terminal-scroll::-webkit-scrollbar-thumb {
+  background: rgba(139, 126, 106, 0.25);
+  border-radius: 3px;
+}
+.terminal-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 126, 106, 0.45);
+}
 
 @keyframes sparkle {
-  0%, 100% {
-    opacity: 0;
-    transform: scale(0.6);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1);
-  }
+  0%, 100% { opacity: 0; transform: scale(0.6); }
+  50% { opacity: 1; transform: scale(1); }
 }
 
 .animate-sparkle {
   animation: sparkle 2.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-sparkle { animation: none; opacity: 1; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

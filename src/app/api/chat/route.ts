@@ -2,10 +2,11 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import OpenAI from "openai";
 
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const context = readFileSync(join(process.cwd(), "whoami.md"), "utf-8");
+
 export async function POST(req: Request) {
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const { question } = await req.json();
-  const context = readFileSync(join(process.cwd(), "whoami.md"), "utf-8");
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -44,6 +45,10 @@ ${context}`,
   });
 
   return new Response(stream, {
-    headers: { "Content-Type": "text/plain; charset=utf-8" },
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-cache",
+      "X-Content-Type-Options": "nosniff",
+    },
   });
 }

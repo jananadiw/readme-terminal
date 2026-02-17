@@ -1,7 +1,16 @@
 "use client";
 
 import { useRef, useCallback, useEffect, useState } from "react";
-import { motion, useMotionValue, useMotionValueEvent, AnimatePresence, useDragControls } from "framer-motion";
+import {
+  LazyMotion,
+  domAnimation,
+  m,
+  useMotionValue,
+  useMotionValueEvent,
+  AnimatePresence,
+  useDragControls,
+  useReducedMotion,
+} from "framer-motion";
 import { useTerminal } from "@/hooks/useTerminal";
 import { useWhoami } from "@/hooks/useWhoami";
 import { useStampPositions, CANVAS_CENTER } from "@/hooks/useStampPositions";
@@ -14,26 +23,25 @@ export default function HomeTemplate() {
   const { stampPositions } = useStampPositions();
   const { history, input, setInput, handleSubmit, scrollRef, inputRef, streaming } =
     useTerminal(whoamiContent);
+  const prefersReducedMotion = useReducedMotion();
 
-  // Canvas panning state — start at 0, then center on mount (avoids hydration mismatch)
   const offsetX = useMotionValue(0);
   const offsetY = useMotionValue(0);
   const dragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
   const gridRef = useRef<HTMLDivElement>(null);
 
-  // Terminal state
   const [minimized, setMinimized] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const dragControls = useDragControls();
   const constraintsRef = useRef<HTMLDivElement>(null);
 
-  // Center the canvas so CANVAS_CENTER maps to viewport center (client-only)
   useEffect(() => {
     offsetX.set(window.innerWidth / 2 - CANVAS_CENTER.x);
     offsetY.set(window.innerHeight / 2 - CANVAS_CENTER.y);
+    requestAnimationFrame(() => setMounted(true));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sync dotted grid background position with canvas offset
   useMotionValueEvent(offsetX, "change", (x) => {
     if (gridRef.current) {
       const y = offsetY.get();
@@ -47,12 +55,8 @@ export default function HomeTemplate() {
     }
   });
 
-  // Canvas drag: use window-level listeners so pointer events on child
-  // elements (stamps, tooltips) never steal or block the drag gesture.
   const onPointerDown = useCallback((e: React.PointerEvent) => {
-    // Don't start canvas drag if interacting with the terminal
     if ((e.target as HTMLElement).closest("[data-terminal]")) return;
-
     dragging.current = true;
     lastPos.current = { x: e.clientX, y: e.clientY };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -67,15 +71,11 @@ export default function HomeTemplate() {
       offsetX.set(offsetX.get() + dx);
       offsetY.set(offsetY.get() + dy);
     };
-
-    const onUp = () => {
-      dragging.current = false;
-    };
+    const onUp = () => { dragging.current = false; };
 
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
-
     return () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
@@ -83,110 +83,103 @@ export default function HomeTemplate() {
     };
   }, [offsetX, offsetY]);
 
+  const noMotion = prefersReducedMotion ?? false;
+
   return (
-    <div
-      ref={constraintsRef}
-      className="h-screen w-screen overflow-hidden relative cursor-grab active:cursor-grabbing"
-    >
-      {/* Dotted grid background */}
+    <LazyMotion features={domAnimation}>
       <div
-        ref={gridRef}
-        className="absolute inset-0"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px)",
-          backgroundSize: "24px 24px",
-        }}
-      />
-
-      {/* Draggable canvas layer with stamps */}
-      <motion.div
-        className="absolute inset-0"
-        style={{ x: offsetX, y: offsetY, touchAction: "none", willChange: "transform" }}
-        onPointerDown={onPointerDown}
+        ref={constraintsRef}
+        className="h-screen w-screen overflow-hidden relative cursor-grab active:cursor-grabbing"
+        style={{ opacity: mounted ? 1 : 0, transition: "opacity 0.35s ease-out" }}
       >
-        {stampPositions?.stamps.map((stamp, i) => (
-          <DraggableStamp
-            key={stamp.src}
-            src={stamp.src}
-            alt={stamp.src.replace("/", "").replace(".png", "")}
-            x={stamp.position.x}
-            y={stamp.position.y}
-            rotation={stamp.rotation}
-            size={stamp.size}
-            zIndex={10 + i}
-            index={i}
-            tooltip={STAMP_TOOLTIPS[stamp.src]}
-          />
-        ))}
-      </motion.div>
+        <div
+          ref={gridRef}
+          className="absolute inset-0"
+          style={{
+            backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+          }}
+        />
 
-      {/* Terminal overlay – draggable & minimizable */}
-      <div className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center">
-        <AnimatePresence mode="wait">
-          {!minimized ? (
-            <motion.div
-              key="terminal"
-              drag
-              dragControls={dragControls}
-              dragListener={false}
-              dragMomentum={false}
-              dragElastic={0}
-              dragConstraints={constraintsRef}
-              initial={{ opacity: 0, scale: 0.15, borderRadius: "16px" }}
-              animate={{ opacity: 1, scale: 1, borderRadius: "0px" }}
-              exit={{ opacity: 0, scale: 0.15, borderRadius: "16px" }}
-              transition={{
-                type: "spring",
-                stiffness: 280,
-                damping: 24,
-                mass: 0.9,
-              }}
-              style={{ transformOrigin: "bottom center" }}
-              className="pointer-events-auto"
-              data-terminal
-            >
-              <TerminalWindow
-                history={history}
-                input={input}
-                onInputChange={setInput}
-                onSubmit={() => handleSubmit()}
-                onSuggestionClick={handleSubmit}
-                inputRef={inputRef}
-                scrollRef={scrollRef}
-                onMinimize={() => setMinimized(true)}
+        <m.div
+          className="absolute inset-0"
+          style={{ x: offsetX, y: offsetY, touchAction: "none", willChange: "transform" }}
+          onPointerDown={onPointerDown}
+        >
+          {stampPositions?.stamps.map((stamp, i) => (
+            <DraggableStamp
+              key={stamp.src}
+              src={stamp.src}
+              alt={stamp.src.replace("/", "").replace(".png", "")}
+              x={stamp.position.x}
+              y={stamp.position.y}
+              rotation={stamp.rotation}
+              size={stamp.size}
+              zIndex={10 + i}
+              index={i}
+              tooltip={STAMP_TOOLTIPS[stamp.src]}
+              noMotion={noMotion}
+            />
+          ))}
+        </m.div>
+
+        <div className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center">
+          <AnimatePresence mode="wait">
+            {!minimized ? (
+              <m.div
+                key="terminal"
+                drag
                 dragControls={dragControls}
-                streaming={streaming}
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="minimized-bar"
-              initial={{ opacity: 0, scale: 0.5, y: -20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.5, y: -20 }}
-              transition={{
-                type: "spring",
-                stiffness: 350,
-                damping: 28,
-              }}
-              className="pointer-events-auto fixed bottom-6 left-1/2 -translate-x-1/2 cursor-pointer"
-              onClick={() => setMinimized(false)}
-            >
-              <div className="flex items-center gap-3 px-5 py-2.5 bg-[#E8E0D0]/95 backdrop-blur-sm rounded-xl border border-[#D4C5A9] shadow-lg hover:shadow-xl transition-shadow">
-                <div className="flex gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#FA5053]" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#27C93F]" />
+                dragListener={false}
+                dragMomentum={false}
+                dragElastic={0}
+                dragConstraints={constraintsRef}
+                initial={noMotion ? false : { opacity: 0, scale: 0.92, y: 24 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 12 }}
+                transition={{ type: "spring", stiffness: 300, damping: 28, mass: 0.8 }}
+                className="pointer-events-auto"
+                style={{ willChange: "transform, opacity" }}
+                data-terminal
+              >
+                <TerminalWindow
+                  history={history}
+                  input={input}
+                  onInputChange={setInput}
+                  onSubmit={() => handleSubmit()}
+                  onSuggestionClick={handleSubmit}
+                  inputRef={inputRef}
+                  scrollRef={scrollRef}
+                  onMinimize={() => setMinimized(true)}
+                  dragControls={dragControls}
+                  streaming={streaming}
+                />
+              </m.div>
+            ) : (
+              <m.div
+                key="minimized-bar"
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                className="pointer-events-auto fixed bottom-6 left-1/2 -translate-x-1/2 cursor-pointer"
+                onClick={() => setMinimized(false)}
+              >
+                <div className="flex items-center gap-3 px-5 py-2.5 bg-[#E8E0D0]/95 backdrop-blur-sm rounded-xl border border-[#D4C5A9] shadow-lg hover:shadow-xl transition-shadow duration-200">
+                  <div className="flex gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#FA5053]" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#27C93F]" />
+                  </div>
+                  <span className="text-[#8B7E6A] text-xs tracking-wide font-medium">
+                    lucky — bash
+                  </span>
                 </div>
-                <span className="text-[#8B7E6A] text-xs tracking-wide font-medium">
-                  lucky — bash
-                </span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </m.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
-    </div>
+    </LazyMotion>
   );
 }

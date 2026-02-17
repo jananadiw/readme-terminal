@@ -11,10 +11,11 @@ export function useTerminal(whoamiContent: string) {
   const [streaming, setStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const rafRef = useRef<number>(0);
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
     }
   }, [history]);
 
@@ -30,11 +31,10 @@ export function useTerminal(whoamiContent: string) {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let text = "";
+      let pending = false;
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        text += decoder.decode(value, { stream: true });
+      const flush = () => {
+        pending = false;
         const current = text;
         setHistory((h) => {
           const updated = [...h];
@@ -44,7 +44,21 @@ export function useTerminal(whoamiContent: string) {
           };
           return updated;
         });
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        text += decoder.decode(value, { stream: true });
+        // Batch DOM updates to animation frames to avoid layout thrashing
+        if (!pending) {
+          pending = true;
+          rafRef.current = requestAnimationFrame(flush);
+        }
       }
+      // Final flush to ensure last chunk is rendered
+      cancelAnimationFrame(rafRef.current);
+      flush();
     } catch {
       setHistory((h) => {
         const updated = [...h];
@@ -91,6 +105,11 @@ export function useTerminal(whoamiContent: string) {
     },
     [input, streaming, whoamiContent, streamLLM]
   );
+
+  // Cleanup RAF on unmount
+  useEffect(() => {
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
 
   return {
     history,

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 
 interface TerminalDotProps {
   color: "red" | "yellow" | "green";
@@ -20,11 +20,11 @@ const DOT_HOVER = {
 
 export default function TerminalDot({ color }: TerminalDotProps) {
   return (
-    <motion.div
+    <m.div
       className="w-3 h-3 rounded-full cursor-pointer"
       style={{ backgroundColor: DOT_COLORS[color] }}
       whileHover={{ scale: 1.2, backgroundColor: DOT_HOVER[color] }}
-      transition={{ duration: 0.15 }}
+      transition={{ type: "spring", stiffness: 500, damping: 25 }}
     />
   );
 }
