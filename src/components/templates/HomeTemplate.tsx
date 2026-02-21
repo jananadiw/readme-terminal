@@ -21,8 +21,15 @@ import TerminalWindow from "@/components/organisms/TerminalWindow";
 export default function HomeTemplate() {
   const { content: whoamiContent } = useWhoami();
   const { stampPositions } = useStampPositions();
-  const { history, input, setInput, handleSubmit, scrollRef, inputRef, streaming } =
-    useTerminal(whoamiContent);
+  const {
+    history,
+    input,
+    setInput,
+    handleSubmit,
+    scrollRef,
+    inputRef,
+    streaming,
+  } = useTerminal(whoamiContent);
   const prefersReducedMotion = useReducedMotion();
 
   const offsetX = useMotionValue(0);
@@ -71,7 +78,9 @@ export default function HomeTemplate() {
       offsetX.set(offsetX.get() + dx);
       offsetY.set(offsetY.get() + dy);
     };
-    const onUp = () => { dragging.current = false; };
+    const onUp = () => {
+      dragging.current = false;
+    };
 
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
@@ -90,20 +99,29 @@ export default function HomeTemplate() {
       <div
         ref={constraintsRef}
         className="h-screen w-screen overflow-hidden relative cursor-grab active:cursor-grabbing"
-        style={{ opacity: mounted ? 1 : 0, transition: "opacity 0.35s ease-out" }}
+        style={{
+          opacity: mounted ? 1 : 0,
+          transition: "opacity 0.35s ease-out",
+        }}
       >
         <div
           ref={gridRef}
           className="absolute inset-0"
           style={{
-            backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px)",
+            backgroundImage:
+              "radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px)",
             backgroundSize: "24px 24px",
           }}
         />
 
         <m.div
           className="absolute inset-0"
-          style={{ x: offsetX, y: offsetY, touchAction: "none", willChange: "transform" }}
+          style={{
+            x: offsetX,
+            y: offsetY,
+            touchAction: "none",
+            willChange: "transform",
+          }}
           onPointerDown={onPointerDown}
         >
           {stampPositions?.stamps.map((stamp, i) => (
@@ -137,7 +155,12 @@ export default function HomeTemplate() {
                 initial={noMotion ? false : { opacity: 0, scale: 0.92, y: 24 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 12 }}
-                transition={{ type: "spring", stiffness: 300, damping: 28, mass: 0.8 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 28,
+                  mass: 0.8,
+                }}
                 className="pointer-events-auto"
                 style={{ willChange: "transform, opacity" }}
                 data-terminal
@@ -165,7 +188,7 @@ export default function HomeTemplate() {
                 className="pointer-events-auto fixed bottom-6 left-1/2 -translate-x-1/2 cursor-pointer"
                 onClick={() => setMinimized(false)}
               >
-                <div className="flex items-center gap-3 px-5 py-2.5 bg-[#E8E0D0]/95 backdrop-blur-sm rounded-xl border border-[#D4C5A9] shadow-lg hover:shadow-xl transition-shadow duration-200">
+                <div className="flex items-center gap-3 px-5 py-2.5 bg-[#DADCEA]/95 backdrop-blur-sm rounded-xl border border-[#DADCEA] shadow-lg hover:shadow-xl transition-shadow duration-200">
                   <div className="flex gap-1.5">
                     <div className="w-2.5 h-2.5 rounded-full bg-[#FA5053]" />
                     <div className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]" />

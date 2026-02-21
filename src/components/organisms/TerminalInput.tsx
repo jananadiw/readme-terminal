@@ -24,7 +24,7 @@ export default function TerminalInput({
   };
 
   return (
-    <div className="flex items-center px-3 py-2 sm:px-5 sm:py-3 border-t border-[#D4C5A9]">
+    <div className="flex items-center px-3 py-2 sm:px-5 sm:py-3 border-t border-[#DADCEA]">
       <TerminalPrompt />
       <Input
         ref={inputRef}

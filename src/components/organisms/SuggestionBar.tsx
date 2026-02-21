@@ -10,7 +10,7 @@ export default function SuggestionBar({
   onSuggestionClick,
 }: SuggestionBarProps) {
   return (
-    <div className="flex gap-2 flex-wrap px-3 py-2 sm:px-5 sm:py-3 border-t border-[#D4C5A9]/50">
+    <div className="flex gap-2 flex-wrap px-3 py-2 sm:px-5 sm:py-3 border-t border-[#DADCEA]/50">
       {suggestions.map((suggestion) => (
         <SuggestionChip
           key={suggestion}

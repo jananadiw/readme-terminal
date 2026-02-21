@@ -40,7 +40,10 @@ export default function DraggableStamp({
         delay: index * 0.02,
         ease: [0.25, 0.46, 0.45, 0.94],
       }}
-      whileHover={{ scale: 1.04, transition: { type: "spring", stiffness: 400, damping: 25 } }}
+      whileHover={{
+        scale: 1.04,
+        transition: { type: "spring", stiffness: 400, damping: 25 },
+      }}
       style={{
         width: size,
         height: size,
@@ -67,7 +70,7 @@ export default function DraggableStamp({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12, ease: "easeOut" }}
-            className="absolute left-1/2 -translate-x-1/2 mt-2 px-4 py-2 bg-[#FF6B35] text-white text-sm font-[Inconsolata] whitespace-nowrap rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.25)] pointer-events-none"
+            className="absolute left-1/2 -translate-x-1/2 mt-2 px-4 py-2 bg-[#0D26CC] text-white text-sm font-[Inconsolata] whitespace-nowrap rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.25)] pointer-events-none"
           >
             {tooltip}
           </m.div>

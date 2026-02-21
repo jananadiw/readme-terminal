@@ -14,7 +14,7 @@ export default function TerminalTitleBar({
 }: TerminalTitleBarProps) {
   return (
     <div
-      className="flex items-center px-4 h-10 bg-[#E8E0D0]/90 border-b border-[#D4C5A9] cursor-grab active:cursor-grabbing select-none"
+      className="flex items-center px-4 h-10 bg-[#DADCEA]/90 border-b border-[#D4D6E5] cursor-grab active:cursor-grabbing select-none"
       onPointerDown={(e) => {
         // Only start drag if not clicking a dot button
         if (!(e.target as HTMLElement).closest("[data-dot-btn]")) {

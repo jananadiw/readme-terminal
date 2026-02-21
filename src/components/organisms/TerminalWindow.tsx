@@ -34,7 +34,7 @@ export default function TerminalWindow({
 }: TerminalWindowProps) {
   return (
     <div
-      className={`${TERMINAL_CONFIG.maxWidth} ${TERMINAL_CONFIG.width} ${TERMINAL_CONFIG.height} bg-[#f3f3f0]/90 backdrop-blur-md rounded-xl shadow-2xl flex flex-col overflow-hidden border border-[#D4C5A9] relative`}
+      className={`${TERMINAL_CONFIG.maxWidth} ${TERMINAL_CONFIG.width} ${TERMINAL_CONFIG.height} bg-[#ECEDF4]/90 backdrop-blur-md rounded-xl shadow-2xl flex flex-col overflow-hidden border border-[#D4D6E5] relative`}
       onClick={() => inputRef.current?.focus()}
     >
       <TerminalTitleBar
