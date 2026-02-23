@@ -12,7 +12,15 @@ export default function TerminalOutput({
   scrollRef,
 }: TerminalOutputProps) {
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-2 text-sm sm:text-base terminal-scroll">
+    <div
+      ref={scrollRef}
+      role="log"
+      aria-label="Terminal output"
+      aria-live="polite"
+      aria-relevant="additions text"
+      aria-atomic={false}
+      className="flex-1 overflow-y-auto bg-[#F7F9FE] p-3 sm:p-5 space-y-2 text-sm sm:text-base leading-7 terminal-scroll"
+    >
       {history.map((item, i) => (
         <HistoryItem key={i} item={item} />
       ))}

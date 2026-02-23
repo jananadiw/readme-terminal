@@ -24,7 +24,7 @@ export default function TerminalInput({
   };
 
   return (
-    <div className="flex items-center px-3 py-2 sm:px-5 sm:py-3 border-t border-[#DADCEA]">
+    <div className="flex items-center gap-1 px-3 py-2 sm:px-5 sm:py-3 border-t border-[#C9D0DF] bg-[#F3F6FC]">
       <TerminalPrompt />
       <Input
         ref={inputRef}
@@ -32,8 +32,12 @@ export default function TerminalInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={disabled ? "Thinking..." : "Type a command..."}
+        placeholder={disabled ? "Thinking…" : "Type a command…"}
         disabled={disabled}
+        aria-label="Type a question or command"
+        autoComplete="off"
+        autoCapitalize="none"
+        spellCheck={false}
         autoFocus
       />
     </div>

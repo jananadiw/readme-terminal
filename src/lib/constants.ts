@@ -20,9 +20,9 @@ export const COLORS = {
 } as const;
 
 export const HELP_TEXT = `Available commands:
-  <span class="text-[#2E6F40]">help</span>     - Show this message
-  <span class="text-[#2E6F40]">clear</span>    - Clear terminal
-  <span class="text-[#2E6F40]">/whoami</span>  - Quick intro about Jananadi
+  help     - Show this message
+  clear    - Clear terminal
+  /whoami  - Quick intro about Jananadi
 
 Or just type a question!`;
 

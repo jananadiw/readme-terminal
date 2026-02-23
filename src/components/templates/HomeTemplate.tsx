@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useEffect, useState } from "react";
+import { useRef, useCallback, useEffect, useMemo, useState } from "react";
 import {
   LazyMotion,
   domAnimation,
@@ -17,6 +17,8 @@ import { useStampPositions, CANVAS_CENTER } from "@/hooks/useStampPositions";
 import { STAMP_TOOLTIPS } from "@/lib/constants";
 import DraggableStamp from "@/components/organisms/DraggableStamp";
 import TerminalWindow from "@/components/organisms/TerminalWindow";
+
+const STAMP_CULL_MARGIN = 260;
 
 export default function HomeTemplate() {
   const { content: whoamiContent } = useWhoami();
@@ -37,33 +39,74 @@ export default function HomeTemplate() {
   const dragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
   const gridRef = useRef<HTMLDivElement>(null);
+  const panSyncRafRef = useRef<number | null>(null);
+  const latestCanvasOffsetRef = useRef({ x: 0, y: 0 });
 
   const [minimized, setMinimized] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
   const dragControls = useDragControls();
   const constraintsRef = useRef<HTMLDivElement>(null);
 
+  const updateGridPosition = useCallback((x: number, y: number) => {
+    if (gridRef.current) {
+      gridRef.current.style.backgroundPosition = `${((x % 24) + 24) % 24}px ${((y % 24) + 24) % 24}px`;
+    }
+  }, []);
+
+  const scheduleCanvasOffsetSync = useCallback(() => {
+    if (panSyncRafRef.current !== null) return;
+
+    panSyncRafRef.current = requestAnimationFrame(() => {
+      panSyncRafRef.current = null;
+      setCanvasOffset({ ...latestCanvasOffsetRef.current });
+    });
+  }, []);
+
+  const syncCanvasState = useCallback(
+    (x: number, y: number) => {
+      latestCanvasOffsetRef.current = { x, y };
+      updateGridPosition(x, y);
+      scheduleCanvasOffsetSync();
+    },
+    [scheduleCanvasOffsetSync, updateGridPosition]
+  );
+
   useEffect(() => {
-    offsetX.set(window.innerWidth / 2 - CANVAS_CENTER.x);
-    offsetY.set(window.innerHeight / 2 - CANVAS_CENTER.y);
-    requestAnimationFrame(() => setMounted(true));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const updateViewport = () =>
+      setViewportSize({ width: window.innerWidth, height: window.innerHeight });
+
+    const initialX = window.innerWidth / 2 - CANVAS_CENTER.x;
+    const initialY = window.innerHeight / 2 - CANVAS_CENTER.y;
+
+    updateViewport();
+    offsetX.set(initialX);
+    offsetY.set(initialY);
+    syncCanvasState(initialX, initialY);
+
+    const mountRaf = requestAnimationFrame(() => setMounted(true));
+    window.addEventListener("resize", updateViewport);
+
+    return () => {
+      cancelAnimationFrame(mountRaf);
+      if (panSyncRafRef.current !== null) {
+        cancelAnimationFrame(panSyncRafRef.current);
+      }
+      window.removeEventListener("resize", updateViewport);
+    };
+  }, [offsetX, offsetY, syncCanvasState]);
 
   useMotionValueEvent(offsetX, "change", (x) => {
-    if (gridRef.current) {
-      const y = offsetY.get();
-      gridRef.current.style.backgroundPosition = `${((x % 24) + 24) % 24}px ${((y % 24) + 24) % 24}px`;
-    }
+    syncCanvasState(x, offsetY.get());
   });
+
   useMotionValueEvent(offsetY, "change", (y) => {
-    if (gridRef.current) {
-      const x = offsetX.get();
-      gridRef.current.style.backgroundPosition = `${((x % 24) + 24) % 24}px ${((y % 24) + 24) % 24}px`;
-    }
+    syncCanvasState(offsetX.get(), y);
   });
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest("[data-terminal]")) return;
+    if (e.button !== 0) return;
     dragging.current = true;
     lastPos.current = { x: e.clientX, y: e.clientY };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -93,6 +136,35 @@ export default function HomeTemplate() {
   }, [offsetX, offsetY]);
 
   const noMotion = prefersReducedMotion ?? false;
+  const visibleStamps = useMemo(() => {
+    if (!stampPositions) return [];
+
+    if (!viewportSize.width || !viewportSize.height) {
+      return [];
+    }
+
+    const left = -canvasOffset.x - STAMP_CULL_MARGIN;
+    const top = -canvasOffset.y - STAMP_CULL_MARGIN;
+    const right = -canvasOffset.x + viewportSize.width + STAMP_CULL_MARGIN;
+    const bottom = -canvasOffset.y + viewportSize.height + STAMP_CULL_MARGIN;
+
+    return stampPositions.stamps
+      .map((stamp, index) => ({ stamp, index }))
+      .filter(({ stamp }) => {
+        const x1 = stamp.position.x;
+        const y1 = stamp.position.y;
+        const x2 = x1 + stamp.size;
+        const y2 = y1 + stamp.size;
+
+        return x2 >= left && x1 <= right && y2 >= top && y1 <= bottom;
+      });
+  }, [
+    stampPositions,
+    viewportSize.width,
+    viewportSize.height,
+    canvasOffset.x,
+    canvasOffset.y,
+  ]);
 
   return (
     <LazyMotion features={domAnimation}>
@@ -114,17 +186,22 @@ export default function HomeTemplate() {
           }}
         />
 
-        <m.div
+        <div
           className="absolute inset-0"
+          style={{ touchAction: "none" }}
+          onPointerDown={onPointerDown}
+          aria-hidden="true"
+        />
+
+        <m.div
+          className="absolute inset-0 pointer-events-none"
           style={{
             x: offsetX,
             y: offsetY,
-            touchAction: "none",
             willChange: "transform",
           }}
-          onPointerDown={onPointerDown}
         >
-          {stampPositions?.stamps.map((stamp, i) => (
+          {visibleStamps.map(({ stamp, index }) => (
             <DraggableStamp
               key={stamp.src}
               src={stamp.src}
@@ -133,8 +210,8 @@ export default function HomeTemplate() {
               y={stamp.position.y}
               rotation={stamp.rotation}
               size={stamp.size}
-              zIndex={10 + i}
-              index={i}
+              zIndex={10 + index}
+              index={index}
               tooltip={STAMP_TOOLTIPS[stamp.src]}
               noMotion={noMotion}
             />
@@ -179,26 +256,28 @@ export default function HomeTemplate() {
                 />
               </m.div>
             ) : (
-              <m.div
+              <m.button
                 key="minimized-bar"
+                type="button"
+                aria-label="Restore terminal window"
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                className="pointer-events-auto fixed bottom-6 left-1/2 -translate-x-1/2 cursor-pointer"
+                className="pointer-events-auto fixed bottom-6 left-1/2 -translate-x-1/2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D26CC]/35"
                 onClick={() => setMinimized(false)}
               >
-                <div className="flex items-center gap-3 px-5 py-2.5 bg-[#DADCEA]/95 backdrop-blur-sm rounded-xl border border-[#DADCEA] shadow-lg hover:shadow-xl transition-shadow duration-200">
+                <div className="flex items-center gap-3 px-5 py-2.5 bg-[#E8EDF8]/98 backdrop-blur-sm rounded-xl border border-[#C8CFDD] shadow-lg hover:shadow-xl transition-shadow duration-200">
                   <div className="flex gap-1.5">
                     <div className="w-2.5 h-2.5 rounded-full bg-[#FA5053]" />
                     <div className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]" />
                     <div className="w-2.5 h-2.5 rounded-full bg-[#27C93F]" />
                   </div>
-                  <span className="text-[#8B7E6A] text-xs tracking-wide font-medium">
+                  <span className="text-[#535A6A] text-xs tracking-[0.12em] font-semibold">
                     lucky — bash
                   </span>
                 </div>
-              </m.div>
+              </m.button>
             )}
           </AnimatePresence>
         </div>

@@ -27,8 +27,6 @@ const CY = 2000;
 
 // Config
 const GRID_SIZE = 360; // Base spacing between items
-const EXCLUSION_RADIUS_X = 500; // No items in this width from center
-const EXCLUSION_RADIUS_Y = 400; // No items in this height from center
 const VARIANCE = 60; // Max random offset from grid point
 
 // The image list (without positions)
@@ -80,7 +78,7 @@ const STAMP_IMAGES = [
 // Simple pseudo-random number generator for deterministic results
 function mulberry32(a: number) {
   return function () {
-    var t = (a += 0x6d2b79f5);
+    let t = (a += 0x6d2b79f5);
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;

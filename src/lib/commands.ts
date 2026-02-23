@@ -1,12 +1,12 @@
 import { ReactNode } from "react";
 import { HELP_TEXT } from "./constants";
-import { CommandResult } from "./types";
+import { CommandResult, HistoryItem } from "./types";
 
 export function processCommand(
   cmd: string,
   whoamiContent: string,
   WelcomeMessageComponent: ReactNode,
-  setHistory: (fn: (prev: any[]) => any[]) => void
+  setHistory: (fn: (prev: HistoryItem[]) => HistoryItem[]) => void
 ): CommandResult {
   const trimmed = cmd.trim().toLowerCase();
 
@@ -20,7 +20,7 @@ export function processCommand(
   }
 
   if (trimmed === "/whoami") {
-    return `<span class="text-[#35373a]">${whoamiContent || "Loading..."}</span>`;
+    return whoamiContent || "Loading...";
   }
 
   return "__LLM__";

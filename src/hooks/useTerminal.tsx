@@ -40,7 +40,7 @@ export function useTerminal(whoamiContent: string) {
           const updated = [...h];
           updated[updated.length - 1] = {
             type: "output",
-            content: `<span class="text-[#35373a]">${current}</span>`,
+            content: current,
           };
           return updated;
         });
@@ -64,7 +64,7 @@ export function useTerminal(whoamiContent: string) {
         const updated = [...h];
         updated[updated.length - 1] = {
           type: "output",
-          content: `<span class="text-[#35373a]">Something went wrong. Try again!</span>`,
+          content: "Something went wrong. Try again!",
         };
         return updated;
       });
@@ -89,7 +89,7 @@ export function useTerminal(whoamiContent: string) {
           { type: "output", content: <WelcomeMessage hasOutput /> },
           ...h.slice(1),
           { type: "input", content: value },
-          { type: "output", content: `<span class="text-[#35373a]">...</span>` },
+          { type: "output", content: "..." },
         ]);
         setInput("");
         streamLLM(value);

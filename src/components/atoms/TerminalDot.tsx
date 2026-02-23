@@ -20,8 +20,9 @@ const DOT_HOVER = {
 
 export default function TerminalDot({ color }: TerminalDotProps) {
   return (
-    <m.div
-      className="w-3 h-3 rounded-full cursor-pointer"
+    <m.span
+      aria-hidden="true"
+      className="block w-3 h-3 rounded-full"
       style={{ backgroundColor: DOT_COLORS[color] }}
       whileHover={{ scale: 1.2, backgroundColor: DOT_HOVER[color] }}
       transition={{ type: "spring", stiffness: 500, damping: 25 }}

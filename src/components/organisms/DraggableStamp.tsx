@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { m, AnimatePresence } from "framer-motion";
 
 interface StampProps {
@@ -28,11 +29,14 @@ export default function DraggableStamp({
   tooltip,
   noMotion = false,
 }: StampProps) {
-  const [hovered, setHovered] = useState(false);
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const tooltipId = tooltip
+    ? `stamp-tip-${src.replaceAll("/", "").replaceAll(".", "-")}`
+    : undefined;
 
   return (
     <m.div
-      className="absolute select-none"
+      className="absolute select-none pointer-events-auto"
       initial={noMotion ? false : { opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1, rotate: rotation }}
       transition={{
@@ -52,25 +56,51 @@ export default function DraggableStamp({
         zIndex,
         willChange: "transform, opacity",
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={() => setTooltipVisible(true)}
+      onMouseLeave={() => setTooltipVisible(false)}
     >
-      <img
-        src={src}
-        alt={alt}
-        className="w-full h-full object-contain pointer-events-none"
-        style={{ filter: "drop-shadow(0 10px 15px rgba(0,0,0,0.2))" }}
-        draggable={false}
-        loading="lazy"
-      />
+      <button
+        type="button"
+        data-stamp-interactive
+        aria-label={tooltip ? `${alt}. ${tooltip}` : alt}
+        aria-describedby={tooltipVisible && tooltipId ? tooltipId : undefined}
+        className="block w-full h-full rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D26CC]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F6FC]"
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          if (e.pointerType !== "mouse") {
+            setTooltipVisible((visible) => !visible);
+          }
+        }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onFocus={() => setTooltipVisible(true)}
+        onBlur={() => setTooltipVisible(false)}
+      >
+        <Image
+          src={src}
+          alt={alt}
+          width={size}
+          height={size}
+          sizes={`(max-width: 640px) min(42vw, ${size}px), ${size}px`}
+          quality={70}
+          className="w-full h-full object-contain pointer-events-none"
+          style={{ filter: "drop-shadow(0 10px 15px rgba(0,0,0,0.2))" }}
+          draggable={false}
+          loading="lazy"
+        />
+      </button>
       <AnimatePresence>
-        {hovered && tooltip && (
+        {tooltipVisible && tooltip && (
           <m.div
+            id={tooltipId}
+            role="tooltip"
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12, ease: "easeOut" }}
-            className="absolute left-1/2 -translate-x-1/2 mt-2 px-4 py-2 bg-[#0D26CC] text-white text-sm font-[Inconsolata] whitespace-nowrap rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.25)] pointer-events-none"
+            className="absolute left-1/2 -translate-x-1/2 mt-2 max-w-[240px] px-3 py-2 bg-[#0D26CC] text-white text-sm leading-5 text-center font-[Inconsolata] whitespace-normal rounded-lg shadow-[0_6px_18px_rgba(0,0,0,0.25)] pointer-events-none"
           >
             {tooltip}
           </m.div>

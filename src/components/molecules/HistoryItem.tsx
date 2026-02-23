@@ -6,17 +6,13 @@ interface HistoryItemProps {
 }
 
 export default function HistoryItem({ item }: HistoryItemProps) {
-  const className = item.type === "input" ? "text-[#9B8B75]" : "text-[#35373a]";
+  const className = item.type === "input" ? "text-[#635A50]" : "text-[#2F2D31]";
 
   return (
     <div className={className}>
       {item.type === "input" && <TerminalPrompt />}
       {typeof item.content === "string" ? (
-        <span
-          dangerouslySetInnerHTML={{
-            __html: item.content.replace(/\n/g, "<br/>"),
-          }}
-        />
+        <span className="whitespace-pre-wrap break-words">{item.content}</span>
       ) : (
         item.content
       )}

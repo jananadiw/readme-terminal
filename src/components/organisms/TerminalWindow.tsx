@@ -34,7 +34,8 @@ export default function TerminalWindow({
 }: TerminalWindowProps) {
   return (
     <div
-      className={`${TERMINAL_CONFIG.maxWidth} ${TERMINAL_CONFIG.width} ${TERMINAL_CONFIG.height} bg-[#ECEDF4]/90 backdrop-blur-md rounded-xl shadow-2xl flex flex-col overflow-hidden border border-[#D4D6E5] relative`}
+      aria-label="Portfolio terminal window"
+      className={`${TERMINAL_CONFIG.maxWidth} ${TERMINAL_CONFIG.width} ${TERMINAL_CONFIG.height} bg-[#EEF2FB]/98 backdrop-blur-xl rounded-2xl shadow-[0_24px_80px_rgba(40,44,52,0.18)] flex flex-col overflow-hidden border border-[#C9D0DF] ring-1 ring-white/70 relative`}
       onClick={() => inputRef.current?.focus()}
     >
       <TerminalTitleBar
