@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import { m, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/classNames";
+import { RETRO_CLASSES } from "@/lib/retroClasses";
 
 interface StampProps {
   src: string;
@@ -64,7 +66,11 @@ export default function DraggableStamp({
         data-stamp-interactive
         aria-label={tooltip ? `${alt}. ${tooltip}` : alt}
         aria-describedby={tooltipVisible && tooltipId ? tooltipId : undefined}
-        className="block w-full h-full rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D26CC]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F6FC]"
+        className={cn(
+          "block w-full h-full rounded-sm",
+          RETRO_CLASSES.focusRing,
+          RETRO_CLASSES.stampFocusOffset
+        )}
         onPointerDown={(e) => {
           e.stopPropagation();
           if (e.pointerType !== "mouse") {
@@ -100,7 +106,10 @@ export default function DraggableStamp({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12, ease: "easeOut" }}
-            className="absolute left-1/2 -translate-x-1/2 mt-2 max-w-[240px] px-3 py-2 bg-[#0D26CC] text-white text-sm leading-5 text-center font-[Inconsolata] whitespace-normal rounded-lg shadow-[0_6px_18px_rgba(0,0,0,0.25)] pointer-events-none"
+            className={cn(
+              "absolute left-1/2 -translate-x-1/2 mt-2 max-w-[240px] px-2.5 py-2 text-xs sm:text-sm leading-5 text-center font-[Inconsolata] whitespace-normal pointer-events-none",
+              RETRO_CLASSES.tooltip
+            )}
           >
             {tooltip}
           </m.div>

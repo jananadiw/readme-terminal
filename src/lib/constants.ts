@@ -1,3 +1,5 @@
+import type { AboutPanelContent, DesktopDockItem } from "./types";
+
 export const COLORS = {
   primary: "#35373a",
   secondary: "#2E6F40",
@@ -82,4 +84,36 @@ export const STAMP_TOOLTIPS: Record<string, string> = {
   "/malta.png": "Malta, lived here for 2 years! 🇲🇹",
   "/WienLib.png": "The most beautiful library I've ever been to!",
   "/shanghai.png": "Strolled around the Bund! 🇨🇳",
+};
+
+export const DESKTOP_DOCK_ITEMS: DesktopDockItem[] = [
+  { id: "about", label: "About", kind: "folder" },
+  { id: "terminal", label: "Terminal", kind: "terminal" },
+  { id: "resume", label: "Resume", kind: "resume" },
+];
+
+export const ABOUT_PANEL_CONTENT: AboutPanelContent = {
+  title: "Hello!~ 👋🏼",
+  subtitle: "Thanks for being here.",
+  imageSrc: "/about/coffee.png",
+  imageAlt: "Illustration of Jananadi holding a coffee cup",
+  paragraphs: [
+    "I'm Jananadi.",
+    "I'm a software engineer by practice, transitioning in to systems-first engineer, learning AI/ML. Since AI has taken half of my software engineer job, I'm also working on product design.",
+    "Recently, I moved to San Francisco from Malta (EU), to give my wild tech dreams a shot.",
+    "At the moment I'm building LinkMap, where heavy connections can be managed and nurtured. Also, I'm working as a freelance front-end lead (product) at Daxe AI, a legal-tech startup.",
+    "Before moving to SF, I was in Malta as a digital nomad, worked as a full-stack engineer building fin-tech tools for Taula Capital in the UK, with Rocketfin.",
+    "I moved from Sri Lanka to South Korea, called it home for about 10 years. Studied, then worked for startups in diverse industries. Tokamak Network, ONDA, as a front-end engineer building SaaS products, Corners as a backend engineer in IoT safety tech.",
+    "When I'm not glued to a monitor, I sketch everyday things (including the ones on the background), read, hike or travel.",
+    "Fun fact: I speak fluent Korean. I've always been a nomad. Moved across two continents, four countries, starting everything from scratch, three times.",
+  ],
+  links: [
+    { id: "github", label: "GitHub" },
+    { id: "linkedin", label: "LinkedIn" },
+    { id: "x", label: "X" },
+    { id: "terminal", label: "Terminal", action: "terminal" },
+    { id: "resume", label: "Resume", action: "resume" },
+    { id: "blog", label: "Blog" },
+  ],
+  footer: "PS: for a change, I wrote all of the above content without AI.",
 };

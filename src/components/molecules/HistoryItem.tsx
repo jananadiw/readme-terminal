@@ -6,10 +6,13 @@ interface HistoryItemProps {
 }
 
 export default function HistoryItem({ item }: HistoryItemProps) {
-  const className = item.type === "input" ? "text-[#635A50]" : "text-[#2F2D31]";
+  const className =
+    item.type === "input"
+      ? "text-[var(--retro-text-muted)]"
+      : "text-[var(--retro-text-primary)]";
 
   return (
-    <div className={className}>
+    <div className={`${className} leading-6 sm:leading-7`}>
       {item.type === "input" && <TerminalPrompt />}
       {typeof item.content === "string" ? (
         <span className="whitespace-pre-wrap break-words">{item.content}</span>

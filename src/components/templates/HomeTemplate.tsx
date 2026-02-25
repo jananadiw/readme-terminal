@@ -14,9 +14,18 @@ import {
 import { useTerminal } from "@/hooks/useTerminal";
 import { useWhoami } from "@/hooks/useWhoami";
 import { useStampPositions, CANVAS_CENTER } from "@/hooks/useStampPositions";
-import { STAMP_TOOLTIPS } from "@/lib/constants";
+import {
+  ABOUT_PANEL_CONTENT,
+  DESKTOP_DOCK_ITEMS,
+  STAMP_TOOLTIPS,
+} from "@/lib/constants";
+import { cn } from "@/lib/classNames";
+import type { DesktopDockItemId } from "@/lib/types";
 import DraggableStamp from "@/components/organisms/DraggableStamp";
 import TerminalWindow from "@/components/organisms/TerminalWindow";
+import MacTopBar from "@/components/organisms/MacTopBar";
+import MacFileDock from "@/components/organisms/MacFileDock";
+import AboutDesktopPanel from "@/components/organisms/AboutDesktopPanel";
 
 const STAMP_CULL_MARGIN = 260;
 
@@ -43,11 +52,16 @@ export default function HomeTemplate() {
   const latestCanvasOffsetRef = useRef({ x: 0, y: 0 });
 
   const [minimized, setMinimized] = useState(false);
+  const [activeDockPanelId, setActiveDockPanelId] =
+    useState<DesktopDockItemId | null>(null);
+  const [activeWindow, setActiveWindow] = useState<"terminal" | "about" | null>(
+    "terminal"
+  );
   const [mounted, setMounted] = useState(false);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
   const dragControls = useDragControls();
-  const constraintsRef = useRef<HTMLDivElement>(null);
+  const terminalBoundsRef = useRef<HTMLDivElement>(null);
 
   const updateGridPosition = useCallback((x: number, y: number) => {
     if (gridRef.current) {
@@ -135,6 +149,95 @@ export default function HomeTemplate() {
     };
   }, [offsetX, offsetY]);
 
+  const focusTerminalInput = useCallback(() => {
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, [inputRef]);
+
+  const hideTerminalWindow = useCallback(() => {
+    setMinimized(true);
+    setActiveWindow(activeDockPanelId === "about" ? "about" : null);
+  }, [activeDockPanelId]);
+
+  const handleDockItemClick = useCallback(
+    (id: DesktopDockItemId) => {
+      if (id === "about") {
+        setActiveDockPanelId((current) => {
+          const next = current === "about" ? null : "about";
+          setActiveWindow(next ? "about" : minimized ? null : "terminal");
+          return next;
+        });
+        return;
+      }
+
+      if (id === "terminal") {
+        setMinimized(false);
+        setActiveWindow("terminal");
+        focusTerminalInput();
+        return;
+      }
+
+      // Resume shortcut is visual-only for now (icon placeholder per current scope).
+    },
+    [focusTerminalInput, minimized]
+  );
+
+  const handleAboutLinkAction = useCallback(
+    (action: "terminal" | "resume") => {
+      if (action === "terminal") {
+        setMinimized(false);
+        setActiveWindow("terminal");
+        focusTerminalInput();
+      }
+      // Resume action intentionally left as a placeholder for a future file/link.
+    },
+    [focusTerminalInput]
+  );
+
+  useEffect(() => {
+    if (activeDockPanelId !== "about") return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActiveDockPanelId(null);
+        setActiveWindow(minimized ? null : "terminal");
+      }
+    };
+
+    const onPointerDownOutside = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+
+      if (
+        target.closest("[data-about-panel]") ||
+        target.closest("[data-file-dock]") ||
+        target.closest("[data-terminal]")
+      ) {
+        return;
+      }
+
+      setActiveDockPanelId(null);
+      setActiveWindow(minimized ? null : "terminal");
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("pointerdown", onPointerDownOutside);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("pointerdown", onPointerDownOutside);
+    };
+  }, [activeDockPanelId, minimized]);
+
+  const activeDockIds = useMemo(() => {
+    const activeIds: DesktopDockItemId[] = [];
+    if (activeDockPanelId === "about" && activeWindow === "about") {
+      activeIds.push("about");
+    }
+    if (!minimized && activeWindow === "terminal") {
+      activeIds.push("terminal");
+    }
+    return activeIds;
+  }, [activeDockPanelId, minimized, activeWindow]);
+
   const noMotion = prefersReducedMotion ?? false;
   const visibleStamps = useMemo(() => {
     if (!stampPositions) return [];
@@ -169,13 +272,14 @@ export default function HomeTemplate() {
   return (
     <LazyMotion features={domAnimation}>
       <div
-        ref={constraintsRef}
         className="h-screen w-screen overflow-hidden relative cursor-grab active:cursor-grabbing"
         style={{
           opacity: mounted ? 1 : 0,
           transition: "opacity 0.35s ease-out",
         }}
       >
+        <MacTopBar />
+
         <div
           ref={gridRef}
           className="absolute inset-0"
@@ -218,7 +322,42 @@ export default function HomeTemplate() {
           ))}
         </m.div>
 
-        <div className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center">
+        <div
+          ref={terminalBoundsRef}
+          className="pointer-events-none absolute inset-x-2 top-8 bottom-24 sm:inset-x-4 sm:top-9 sm:bottom-24"
+          aria-hidden="true"
+        />
+
+        <AnimatePresence>
+          {activeDockPanelId === "about" && (
+            <m.div
+              key="about-panel"
+              initial={noMotion ? false : { opacity: 0, y: 12, scale: 0.99 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.99 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className={activeWindow === "about" ? "relative z-[62]" : "relative z-[46]"}
+            >
+              <AboutDesktopPanel
+                content={ABOUT_PANEL_CONTENT}
+                active={activeWindow === "about"}
+                onActivate={() => setActiveWindow("about")}
+                onClose={() => {
+                  setActiveDockPanelId(null);
+                  setActiveWindow(minimized ? null : "terminal");
+                }}
+                onLinkAction={handleAboutLinkAction}
+              />
+            </m.div>
+          )}
+        </AnimatePresence>
+
+        <div
+          className={cn(
+            "absolute inset-x-0 top-6 bottom-16 sm:bottom-20 pointer-events-none flex items-center justify-center px-2 sm:px-4",
+            activeWindow === "terminal" ? "z-[62]" : "z-[46]"
+          )}
+        >
           <AnimatePresence mode="wait">
             {!minimized ? (
               <m.div
@@ -228,7 +367,7 @@ export default function HomeTemplate() {
                 dragListener={false}
                 dragMomentum={false}
                 dragElastic={0}
-                dragConstraints={constraintsRef}
+                dragConstraints={terminalBoundsRef}
                 initial={noMotion ? false : { opacity: 0, scale: 0.92, y: 24 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 12 }}
@@ -250,37 +389,23 @@ export default function HomeTemplate() {
                   onSuggestionClick={handleSubmit}
                   inputRef={inputRef}
                   scrollRef={scrollRef}
-                  onMinimize={() => setMinimized(true)}
+                  onClose={hideTerminalWindow}
+                  onMinimize={hideTerminalWindow}
                   dragControls={dragControls}
                   streaming={streaming}
+                  active={activeWindow === "terminal"}
+                  onActivate={() => setActiveWindow("terminal")}
                 />
               </m.div>
-            ) : (
-              <m.button
-                key="minimized-bar"
-                type="button"
-                aria-label="Restore terminal window"
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                className="pointer-events-auto fixed bottom-6 left-1/2 -translate-x-1/2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D26CC]/35"
-                onClick={() => setMinimized(false)}
-              >
-                <div className="flex items-center gap-3 px-5 py-2.5 bg-[#E8EDF8]/98 backdrop-blur-sm rounded-xl border border-[#C8CFDD] shadow-lg hover:shadow-xl transition-shadow duration-200">
-                  <div className="flex gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-[#FA5053]" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-[#27C93F]" />
-                  </div>
-                  <span className="text-[#535A6A] text-xs tracking-[0.12em] font-semibold">
-                    lucky — bash
-                  </span>
-                </div>
-              </m.button>
-            )}
+            ) : null}
           </AnimatePresence>
         </div>
+
+        <MacFileDock
+          items={DESKTOP_DOCK_ITEMS}
+          activeIds={activeDockIds}
+          onItemClick={handleDockItemClick}
+        />
       </div>
     </LazyMotion>
   );

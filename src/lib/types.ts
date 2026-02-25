@@ -27,3 +27,28 @@ export interface TerminalState {
 }
 
 export type CommandResult = string | ReactNode | undefined;
+
+export type DesktopDockItemId = "about" | "terminal" | "resume";
+
+export interface DesktopDockItem {
+  id: DesktopDockItemId;
+  label: string;
+  kind: "folder" | "terminal" | "resume";
+}
+
+export interface AboutPanelLink {
+  id: string;
+  label: string;
+  href?: string;
+  action?: "terminal" | "resume";
+}
+
+export interface AboutPanelContent {
+  title: string;
+  subtitle: string;
+  imageSrc: string;
+  imageAlt: string;
+  paragraphs: string[];
+  links: AboutPanelLink[];
+  footer: string;
+}

@@ -1,5 +1,6 @@
 import ColoredText from "../atoms/ColoredText";
 import PixelClover from "../atoms/PixelClover";
+import { RETRO_THEME } from "@/lib/retroTheme";
 
 interface WelcomeMessageProps {
   hasOutput?: boolean;
@@ -12,12 +13,12 @@ export default function WelcomeMessage({ hasOutput = false }: WelcomeMessageProp
         <PixelClover leaves={hasOutput ? 4 : 3} />
       </div>
       <div className="mt-2">
-        <ColoredText color="#FA766E">Welcome!</ColoredText> I&apos;m
+        <ColoredText color={RETRO_THEME.colors.accentRed}>Welcome!</ColoredText> I&apos;m
         Jananadi&apos;s portfolio terminal.
       </div>
       <div className="mt-1">
-        Type <ColoredText color="#2E6F40">help</ColoredText> for commands, or try
-        asking:
+        Type <ColoredText color={RETRO_THEME.colors.accentGreen}>help</ColoredText>{" "}
+        for commands, or try asking:
       </div>
       <div>{'  • "What do you do?"'}</div>
       <div>{'  • "Tell me about your projects"'}</div>

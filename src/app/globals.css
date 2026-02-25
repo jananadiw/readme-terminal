@@ -1,7 +1,153 @@
 @import "tailwindcss";
 
+:root {
+  --retro-desktop: #ececf4;
+  --retro-window: #dde0f2;
+  --retro-window-alt: #e5e8f5;
+  --retro-surface: #d9dcef;
+  --retro-inset: #f7f8fe;
+  --retro-inset-alt: #eef1ff;
+  --retro-titlebar: #d4d8e8;
+  --retro-tooltip-bg: #eef2ff;
+
+  --retro-border: #aeb4cc;
+  --retro-border-soft: #c4cadf;
+  --retro-highlight: rgba(255, 255, 255, 0.88);
+  --retro-shadow: rgba(142, 149, 174, 0.78);
+  --retro-shadow-deep: rgba(24, 30, 50, 0.14);
+
+  --retro-text-chrome: #4c5367;
+  --retro-text-primary: #31374a;
+  --retro-text-muted: #555f78;
+  --retro-text-subtle: #68728a;
+
+  --retro-accent-blue: #2e46ff;
+  --retro-accent-blue-text: #2a3cb5;
+  --retro-accent-blue-fill: #d8e2ff;
+  --retro-accent-blue-fill-strong: #cad4ff;
+  --retro-accent-green: #2e6f40;
+  --retro-accent-red: #fa766e;
+  --retro-accent-yellow: #ffcc00;
+  --retro-focus: rgba(46, 70, 255, 0.4);
+}
+
 body {
-  background: #ECEDF4;
+  background: var(--retro-desktop);
+  color: var(--retro-text-primary);
+}
+
+.retro-topbar,
+.retro-titlebar-surface {
+  box-shadow: inset 0 1px 0 var(--retro-highlight);
+  background-image:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.06)),
+    repeating-linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.05) 0 1px,
+      rgba(0, 0, 0, 0.015) 1px 2px
+    );
+}
+
+.retro-surface-panel {
+  box-shadow:
+    inset 1px 1px 0 var(--retro-highlight),
+    inset -1px -1px 0 var(--retro-shadow);
+}
+
+.retro-window-frame {
+  box-shadow:
+    inset 1px 1px 0 var(--retro-highlight),
+    inset -1px -1px 0 var(--retro-shadow),
+    0 16px 36px var(--retro-shadow-deep);
+}
+
+.retro-inset-panel {
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.72),
+    inset -1px -1px 0 rgba(173, 180, 204, 0.55);
+}
+
+.retro-toolbar-surface {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.retro-tooltip-panel {
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.85),
+    inset -1px -1px 0 rgba(178, 184, 210, 0.55),
+    0 8px 18px rgba(22, 25, 36, 0.18);
+}
+
+.retro-button {
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.retro-title-stripes {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(70, 76, 96, 0.85) 0 1px,
+    transparent 1px 2px
+  );
+  opacity: 0.7;
+}
+
+.retro-window-control-box {
+  background: var(--retro-window-alt);
+  border: 1px solid var(--retro-border);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.8),
+    inset -1px -1px 0 rgba(150, 157, 181, 0.7);
+}
+
+.retro-window-control-box[aria-disabled="true"] {
+  opacity: 0.8;
+}
+
+.retro-window-control-box:active {
+  box-shadow:
+    inset 1px 1px 0 rgba(150, 157, 181, 0.65),
+    inset -1px -1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.retro-scroll-btn,
+.retro-scroll-track,
+.retro-scroll-corner {
+  background: var(--retro-surface);
+  border: 1px solid var(--retro-border);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.75),
+    inset -1px -1px 0 rgba(156, 163, 187, 0.7);
+}
+
+.retro-scroll-track {
+  position: relative;
+}
+
+.retro-scroll-thumb {
+  position: absolute;
+  background: var(--retro-window-alt);
+  border: 1px solid var(--retro-border);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.85),
+    inset -1px -1px 0 rgba(149, 157, 183, 0.6);
+}
+
+.retro-scroll-thumb:focus-visible {
+  outline: 2px solid var(--retro-focus);
+  outline-offset: -1px;
+}
+
+.retro-focus-ring:focus-visible {
+  outline: 2px solid var(--retro-focus);
+  outline-offset: 1px;
+}
+
+.retro-hide-native-scrollbar {
+  scrollbar-width: none;
+}
+
+.retro-hide-native-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* Smooth terminal scrolling */
@@ -10,17 +156,19 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 .terminal-scroll::-webkit-scrollbar {
-  width: 5px;
+  width: 9px;
 }
 .terminal-scroll::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(213, 218, 236, 0.5);
+  border-left: 1px solid rgba(174, 180, 204, 0.35);
 }
 .terminal-scroll::-webkit-scrollbar-thumb {
-  background: rgba(139, 126, 106, 0.25);
-  border-radius: 3px;
+  background: rgba(126, 135, 165, 0.55);
+  border-radius: 2px;
+  border: 1px solid rgba(130, 138, 168, 0.55);
 }
 .terminal-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 126, 106, 0.45);
+  background: rgba(104, 115, 154, 0.65);
 }
 
 @keyframes sparkle {

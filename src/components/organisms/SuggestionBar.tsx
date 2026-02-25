@@ -1,4 +1,5 @@
 import SuggestionChip from "../molecules/SuggestionChip";
+import { RETRO_CLASSES } from "@/lib/retroClasses";
 
 interface SuggestionBarProps {
   suggestions: readonly string[];
@@ -10,7 +11,7 @@ export default function SuggestionBar({
   onSuggestionClick,
 }: SuggestionBarProps) {
   return (
-    <div className="flex gap-2 flex-wrap px-3 py-2 sm:px-5 sm:py-3 border-t border-[#C9D0DF] bg-[#EDF1FB]">
+    <div className={`flex gap-2 flex-wrap px-2.5 py-2 sm:px-4 sm:py-2.5 ${RETRO_CLASSES.toolbarRow}`}>
       {suggestions.map((suggestion) => (
         <SuggestionChip
           key={suggestion}
