@@ -7,7 +7,7 @@ interface SuggestionChipProps {
 
 export default function SuggestionChip({ text, onClick }: SuggestionChipProps) {
   return (
-    <Button variant="suggestion" onClick={onClick} className="max-w-full">
+    <Button variant="panelLink" onClick={onClick} className="max-w-full text-[15px]">
       {text}
     </Button>
   );

@@ -11,7 +11,9 @@ export default function SuggestionBar({
   onSuggestionClick,
 }: SuggestionBarProps) {
   return (
-    <div className={`flex gap-2 flex-wrap px-2.5 py-2 sm:px-4 sm:py-2.5 ${RETRO_CLASSES.toolbarRow}`}>
+    <div
+      className={`flex gap-2 flex-wrap px-2.5 py-2 sm:px-4 sm:py-2.5 font-[Inconsolata] text-[var(--retro-accent-blue-text)] ${RETRO_CLASSES.toolbarRow}`}
+    >
       {suggestions.map((suggestion) => (
         <SuggestionChip
           key={suggestion}

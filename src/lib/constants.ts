@@ -108,12 +108,15 @@ export const ABOUT_PANEL_CONTENT: AboutPanelContent = {
     "Fun fact: I speak fluent Korean. I've always been a nomad. Moved across two continents, four countries, starting everything from scratch, three times.",
   ],
   links: [
-    { id: "github", label: "GitHub" },
-    { id: "linkedin", label: "LinkedIn" },
-    { id: "x", label: "X" },
-    { id: "terminal", label: "Terminal", action: "terminal" },
-    { id: "resume", label: "Resume", action: "resume" },
-    { id: "blog", label: "Blog" },
+    { id: "github", label: "GitHub", href: "https://github.com/jananadiw" },
+    { id: "linkedin", label: "LinkedIn", href: "https://www.linkedin.com/in/jananadiw" },
+    { id: "x", label: "X", href: "https://x.com/jananadiw" },
+    {
+      id: "resume",
+      label: "Resume",
+      href: "https://drive.google.com/file/d/1ZmFAUx4e09y2YHM9s7r9dvie9fVSc4KR/view?pli=1",
+    },
+    { id: "blog", label: "Blog", href: "https://www.jananadiw.com/blog" },
   ],
   footer: "PS: for a change, I wrote all of the above content without AI.",
 };

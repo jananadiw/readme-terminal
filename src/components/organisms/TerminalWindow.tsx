@@ -18,7 +18,6 @@ interface TerminalWindowProps {
   inputRef: RefObject<HTMLInputElement | null>;
   scrollRef: RefObject<HTMLDivElement | null>;
   onClose: () => void;
-  onMinimize: () => void;
   dragControls: DragControls;
   streaming?: boolean;
   active?: boolean;
@@ -34,7 +33,6 @@ export default function TerminalWindow({
   inputRef,
   scrollRef,
   onClose,
-  onMinimize,
   dragControls,
   streaming,
   active = true,
@@ -49,7 +47,7 @@ export default function TerminalWindow({
         TERMINAL_CONFIG.maxWidth,
         TERMINAL_CONFIG.width,
         TERMINAL_CONFIG.height,
-        "flex flex-col relative text-[var(--retro-text-primary)]",
+        "flex flex-col relative cursor-default font-[Inconsolata] text-[var(--retro-accent-blue-text)]",
         RETRO_CLASSES.windowFrame,
         active ? RETRO_CLASSES.windowFrameActive : RETRO_CLASSES.windowFrameInactive
       )}
@@ -64,7 +62,6 @@ export default function TerminalWindow({
       <TerminalTitleBar
         title={TERMINAL_CONFIG.title}
         onClose={onClose}
-        onMinimize={onMinimize}
         dragControls={dragControls}
         active={active}
       />

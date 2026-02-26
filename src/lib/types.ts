@@ -40,7 +40,7 @@ export interface AboutPanelLink {
   id: string;
   label: string;
   href?: string;
-  action?: "terminal" | "resume";
+  action?: "resume";
 }
 
 export interface AboutPanelContent {

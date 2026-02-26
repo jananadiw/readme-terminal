@@ -60,7 +60,7 @@ export default function ClassicWindowTitleBar({
     <div
       data-window-titlebar
       className={cn(
-        "flex h-6 items-center gap-1 px-1.5",
+        "flex h-6 touch-none items-center gap-1 px-1.5",
         RETRO_CLASSES.titleBar,
         active ? RETRO_CLASSES.titleBarActive : RETRO_CLASSES.titleBarInactive,
         className

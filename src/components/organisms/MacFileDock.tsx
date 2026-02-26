@@ -1,8 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { cn } from "@/lib/classNames";
 import { RETRO_CLASSES } from "@/lib/retroClasses";
-import { RETRO_THEME } from "@/lib/retroTheme";
 import type { DesktopDockItem, DesktopDockItemId } from "@/lib/types";
 
 interface MacFileDockProps {
@@ -11,103 +11,43 @@ interface MacFileDockProps {
   onItemClick: (id: DesktopDockItemId) => void;
 }
 
-function FolderIcon({ active }: { active: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 34 26"
-      className="h-6 w-8 sm:h-7 sm:w-9"
-      aria-hidden="true"
-    >
-      <path
-        d="M2.5 8.5h11l2.6-2.8h15.4v17H2.5z"
-        fill={active ? RETRO_THEME.svg.dockFillActiveStrong : "transparent"}
-        stroke={RETRO_THEME.svg.dockStroke}
-        strokeWidth="1.4"
-        strokeLinejoin="miter"
-      />
-      <path
-        d="M2 10h30v13.5H2z"
-        fill={active ? RETRO_THEME.svg.dockFillActive : "transparent"}
-        stroke={RETRO_THEME.svg.dockStroke}
-        strokeWidth="1.4"
-      />
-    </svg>
-  );
-}
+const DOCK_ICON_ASSETS: Record<
+  DesktopDockItemId,
+  { closedSrc: string; openSrc: string }
+> = {
+  about: {
+    closedSrc: "/icons/fileIcon.png",
+    openSrc: "/icons/fileOpenIcon.png",
+  },
+  terminal: {
+    closedSrc: "/icons/termCloseIcon.png",
+    openSrc: "/icons/termOpenIcon.png",
+  },
+  resume: {
+    closedSrc: "/icons/resumeIcon.png",
+    openSrc: "/icons/resumeOpenIcon.png",
+  },
+};
 
-function TerminalIcon({ active }: { active: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 34 26"
-      className="h-6 w-8 sm:h-7 sm:w-9"
-      aria-hidden="true"
-    >
-      <rect
-        x="3"
-        y="4"
-        width="28"
-        height="18"
-        fill={active ? RETRO_THEME.svg.dockTerminalFill : "transparent"}
-        stroke={RETRO_THEME.svg.dockStroke}
-        strokeWidth="1.4"
-      />
-      <path
-        d="M9 10l4 2.5-4 2.5"
-        fill="none"
-        stroke={RETRO_THEME.svg.dockStroke}
-        strokeWidth="1.4"
-        strokeLinecap="square"
-        strokeLinejoin="miter"
-      />
-      <path
-        d="M16.5 16h7"
-        stroke={RETRO_THEME.svg.dockStroke}
-        strokeWidth="1.4"
-        strokeLinecap="square"
-      />
-    </svg>
-  );
-}
+function DockItemIcon({ id, active }: { id: DesktopDockItemId; active: boolean }) {
+  const assets = DOCK_ICON_ASSETS[id];
+  const src = active ? assets.openSrc : assets.closedSrc;
 
-function ResumeIcon() {
   return (
-    <svg
-      viewBox="0 0 28 34"
-      className="h-7 w-6 sm:h-8 sm:w-7"
+    <span
       aria-hidden="true"
+      className="pointer-events-none relative block h-[34px] w-[34px] sm:h-10 sm:w-10"
     >
-      <path
-        d="M4 2h14l6 6v24H4z"
-        fill="transparent"
-        stroke={RETRO_THEME.svg.dockStroke}
-        strokeWidth="1.4"
+      <Image
+        src={src}
+        alt=""
+        fill
+        sizes="(max-width: 640px) 34px, 40px"
+        className="object-contain"
+        draggable={false}
       />
-      <path
-        d="M18 2v7h6"
-        fill="transparent"
-        stroke={RETRO_THEME.svg.dockStroke}
-        strokeWidth="1.4"
-      />
-      <path
-        d="M8 21h12M8 25h12M8 29h9"
-        stroke={RETRO_THEME.svg.dockStroke}
-        strokeWidth="1.1"
-        strokeLinecap="square"
-      />
-    </svg>
+    </span>
   );
-}
-
-function DockItemIcon({
-  kind,
-  active,
-}: {
-  kind: DesktopDockItem["kind"];
-  active: boolean;
-}) {
-  if (kind === "resume") return <ResumeIcon />;
-  if (kind === "terminal") return <TerminalIcon active={active} />;
-  return <FolderIcon active={active} />;
 }
 
 export default function MacFileDock({
@@ -141,12 +81,20 @@ export default function MacFileDock({
                 className={cn(
                   RETRO_CLASSES.dockItemBase,
                   RETRO_CLASSES.focusRing,
-                  active ? RETRO_CLASSES.dockItemActive : RETRO_CLASSES.dockItemIdle
+                  "bg-transparent shadow-none hover:bg-transparent active:bg-transparent",
+                  active ? "opacity-100" : "opacity-95 hover:opacity-100"
                 )}
                 onClick={() => onItemClick(item.id)}
               >
-                <DockItemIcon kind={item.kind} active={active} />
-                <span className="mt-1 font-[Inconsolata] text-[10px] sm:text-[11px] leading-none tracking-[0.03em]">
+                <DockItemIcon id={item.id} active={active} />
+                <span
+                  className={cn(
+                    "mt-1 font-[Inconsolata] text-[10px] sm:text-[11px] leading-none tracking-[0.03em]",
+                    active
+                      ? "text-[var(--retro-accent-blue-text)]"
+                      : "text-[var(--retro-text-chrome)]"
+                  )}
+                >
                   {item.label}
                 </span>
               </button>

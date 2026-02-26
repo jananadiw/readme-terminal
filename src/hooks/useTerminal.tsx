@@ -12,6 +12,21 @@ export function useTerminal(whoamiContent: string) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const rafRef = useRef<number>(0);
+  const focusRafRef = useRef<number>(0);
+
+  const resetInputCursor = useCallback(() => {
+    cancelAnimationFrame(focusRafRef.current);
+    focusRafRef.current = requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      try {
+        el.setSelectionRange(0, 0);
+      } catch {
+        // Some browsers can throw if the input is temporarily disabled.
+      }
+    });
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -70,8 +85,9 @@ export function useTerminal(whoamiContent: string) {
       });
     } finally {
       setStreaming(false);
+      resetInputCursor();
     }
-  }, []);
+  }, [resetInputCursor]);
 
   const handleSubmit = useCallback(
     (value: string = input) => {
@@ -92,6 +108,7 @@ export function useTerminal(whoamiContent: string) {
           { type: "output", content: "..." },
         ]);
         setInput("");
+        resetInputCursor();
         streamLLM(value);
       } else {
         setHistory((h) => [
@@ -101,14 +118,18 @@ export function useTerminal(whoamiContent: string) {
           ...(output ? [{ type: "output" as const, content: output }] : []),
         ]);
         setInput("");
+        resetInputCursor();
       }
     },
-    [input, streaming, whoamiContent, streamLLM]
+    [input, streaming, whoamiContent, streamLLM, resetInputCursor]
   );
 
   // Cleanup RAF on unmount
   useEffect(() => {
-    return () => cancelAnimationFrame(rafRef.current);
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      cancelAnimationFrame(focusRafRef.current);
+    };
   }, []);
 
   return {

@@ -25,7 +25,7 @@ export default function TerminalOutput({
       aria-atomic={false}
       active={active}
       className={`m-2 mb-0 sm:m-3 sm:mb-0 flex-1 ${RETRO_CLASSES.inset}`}
-      viewportClassName="px-3 py-2.5 sm:px-4 sm:py-3 space-y-2 text-sm sm:text-base leading-6 sm:leading-7 terminal-scroll"
+      viewportClassName="bg-[var(--retro-window)] px-3 py-2.5 sm:px-4 sm:py-3 space-y-2 text-[15px] font-[Inconsolata] text-[var(--retro-accent-blue-text)] terminal-scroll"
     >
       {history.map((item, i) => (
         <HistoryItem key={i} item={item} />

@@ -22,12 +22,6 @@ export const RETRO_THEME = {
     accentYellow: "var(--retro-accent-yellow)",
     tooltipBg: "var(--retro-tooltip-bg)",
   },
-  svg: {
-    dockStroke: "#2E46FF",
-    dockFillActive: "#D8E2FF",
-    dockFillActiveStrong: "#C9D4FF",
-    dockTerminalFill: "#D4DEFF",
-  },
   trafficLights: {
     red: "#FF5F57",
     yellow: "#FEBC2E",
@@ -42,4 +36,3 @@ export type RetroTrafficLightColor = keyof Pick<
   typeof RETRO_THEME.trafficLights,
   "red" | "yellow" | "green"
 >;
-

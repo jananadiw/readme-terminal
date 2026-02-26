@@ -3,7 +3,7 @@
 import { useRef, useCallback, useEffect, useMemo, useState } from "react";
 import {
   LazyMotion,
-  domAnimation,
+  domMax,
   m,
   useMotionValue,
   useMotionValueEvent,
@@ -12,7 +12,6 @@ import {
   useReducedMotion,
 } from "framer-motion";
 import { useTerminal } from "@/hooks/useTerminal";
-import { useWhoami } from "@/hooks/useWhoami";
 import { useStampPositions, CANVAS_CENTER } from "@/hooks/useStampPositions";
 import {
   ABOUT_PANEL_CONTENT,
@@ -29,8 +28,11 @@ import AboutDesktopPanel from "@/components/organisms/AboutDesktopPanel";
 
 const STAMP_CULL_MARGIN = 260;
 
-export default function HomeTemplate() {
-  const { content: whoamiContent } = useWhoami();
+interface HomeTemplateProps {
+  initialWhoamiContent: string;
+}
+
+export default function HomeTemplate({ initialWhoamiContent }: HomeTemplateProps) {
   const { stampPositions } = useStampPositions();
   const {
     history,
@@ -40,7 +42,7 @@ export default function HomeTemplate() {
     scrollRef,
     inputRef,
     streaming,
-  } = useTerminal(whoamiContent);
+  } = useTerminal(initialWhoamiContent);
   const prefersReducedMotion = useReducedMotion();
 
   const offsetX = useMotionValue(0);
@@ -57,10 +59,10 @@ export default function HomeTemplate() {
   const [activeWindow, setActiveWindow] = useState<"terminal" | "about" | null>(
     "terminal"
   );
-  const [mounted, setMounted] = useState(false);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
   const dragControls = useDragControls();
+  const aboutDragControls = useDragControls();
   const terminalBoundsRef = useRef<HTMLDivElement>(null);
 
   const updateGridPosition = useCallback((x: number, y: number) => {
@@ -99,11 +101,9 @@ export default function HomeTemplate() {
     offsetY.set(initialY);
     syncCanvasState(initialX, initialY);
 
-    const mountRaf = requestAnimationFrame(() => setMounted(true));
     window.addEventListener("resize", updateViewport);
 
     return () => {
-      cancelAnimationFrame(mountRaf);
       if (panSyncRafRef.current !== null) {
         cancelAnimationFrame(panSyncRafRef.current);
       }
@@ -181,17 +181,9 @@ export default function HomeTemplate() {
     [focusTerminalInput, minimized]
   );
 
-  const handleAboutLinkAction = useCallback(
-    (action: "terminal" | "resume") => {
-      if (action === "terminal") {
-        setMinimized(false);
-        setActiveWindow("terminal");
-        focusTerminalInput();
-      }
-      // Resume action intentionally left as a placeholder for a future file/link.
-    },
-    [focusTerminalInput]
-  );
+  const handleAboutLinkAction = useCallback(() => {
+    // Resume action intentionally left as a placeholder for a future file/link.
+  }, []);
 
   useEffect(() => {
     if (activeDockPanelId !== "about") return;
@@ -203,27 +195,9 @@ export default function HomeTemplate() {
       }
     };
 
-    const onPointerDownOutside = (event: PointerEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (!target) return;
-
-      if (
-        target.closest("[data-about-panel]") ||
-        target.closest("[data-file-dock]") ||
-        target.closest("[data-terminal]")
-      ) {
-        return;
-      }
-
-      setActiveDockPanelId(null);
-      setActiveWindow(minimized ? null : "terminal");
-    };
-
     window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("pointerdown", onPointerDownOutside);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("pointerdown", onPointerDownOutside);
     };
   }, [activeDockPanelId, minimized]);
 
@@ -270,13 +244,9 @@ export default function HomeTemplate() {
   ]);
 
   return (
-    <LazyMotion features={domAnimation}>
+    <LazyMotion features={domMax}>
       <div
-        className="h-screen w-screen overflow-hidden relative cursor-grab active:cursor-grabbing"
-        style={{
-          opacity: mounted ? 1 : 0,
-          transition: "opacity 0.35s ease-out",
-        }}
+        className="h-screen w-screen overflow-hidden relative"
       >
         <MacTopBar />
 
@@ -291,7 +261,7 @@ export default function HomeTemplate() {
         />
 
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 cursor-grab active:cursor-grabbing"
           style={{ touchAction: "none" }}
           onPointerDown={onPointerDown}
           aria-hidden="true"
@@ -328,29 +298,48 @@ export default function HomeTemplate() {
           aria-hidden="true"
         />
 
-        <AnimatePresence>
-          {activeDockPanelId === "about" && (
-            <m.div
-              key="about-panel"
-              initial={noMotion ? false : { opacity: 0, y: 12, scale: 0.99 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.99 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-              className={activeWindow === "about" ? "relative z-[62]" : "relative z-[46]"}
-            >
-              <AboutDesktopPanel
-                content={ABOUT_PANEL_CONTENT}
-                active={activeWindow === "about"}
-                onActivate={() => setActiveWindow("about")}
-                onClose={() => {
-                  setActiveDockPanelId(null);
-                  setActiveWindow(minimized ? null : "terminal");
-                }}
-                onLinkAction={handleAboutLinkAction}
-              />
-            </m.div>
+        <div
+          className={cn(
+            "absolute inset-x-0 top-6 bottom-16 sm:bottom-20 pointer-events-none flex items-center justify-center px-3 sm:px-5",
+            activeWindow === "about" ? "z-[62]" : "z-[46]"
           )}
-        </AnimatePresence>
+        >
+          <AnimatePresence>
+            {activeDockPanelId === "about" && (
+              <m.div
+                key="about-panel"
+                drag
+                dragControls={aboutDragControls}
+                dragListener={false}
+                dragMomentum={false}
+                dragElastic={0}
+                dragConstraints={terminalBoundsRef}
+                initial={noMotion ? false : { opacity: 0, y: 12, scale: 0.99 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.99 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                className="pointer-events-auto"
+                style={{ willChange: "transform, opacity" }}
+              >
+                <AboutDesktopPanel
+                  content={ABOUT_PANEL_CONTENT}
+                  active={activeWindow === "about"}
+                  onActivate={() => setActiveWindow("about")}
+                  onTitleBarPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    aboutDragControls.start(event);
+                  }}
+                  onClose={() => {
+                    setActiveDockPanelId(null);
+                    setActiveWindow(minimized ? null : "terminal");
+                  }}
+                  onLinkAction={handleAboutLinkAction}
+                />
+              </m.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         <div
           className={cn(
@@ -390,7 +379,6 @@ export default function HomeTemplate() {
                   inputRef={inputRef}
                   scrollRef={scrollRef}
                   onClose={hideTerminalWindow}
-                  onMinimize={hideTerminalWindow}
                   dragControls={dragControls}
                   streaming={streaming}
                   active={activeWindow === "terminal"}
