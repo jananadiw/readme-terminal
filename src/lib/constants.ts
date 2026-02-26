@@ -95,7 +95,7 @@ export const DESKTOP_DOCK_ITEMS: DesktopDockItem[] = [
 export const ABOUT_PANEL_CONTENT: AboutPanelContent = {
   title: "Hello!~ 👋🏼",
   subtitle: "Thanks for being here.",
-  imageSrc: "/about/coffee.png",
+  imageSrc: "/About/coffee.png",
   imageAlt: "Illustration of Jananadi holding a coffee cup",
   paragraphs: [
     "I'm Jananadi.",
