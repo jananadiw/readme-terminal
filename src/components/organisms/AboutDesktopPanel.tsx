@@ -71,7 +71,7 @@ export default function AboutDesktopPanel({
     y: 0,
   });
 
-  const handleArtTooltipPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const handleArtTooltipPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
     if (event.pointerType && event.pointerType !== "mouse") return;
 
     const rect = event.currentTarget.getBoundingClientRect();
