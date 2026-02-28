@@ -107,9 +107,10 @@ export default function DraggableStamp({
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12, ease: "easeOut" }}
             className={cn(
-              "absolute left-1/2 -translate-x-1/2 mt-2 max-w-[240px] px-2.5 py-2 text-xs sm:text-sm leading-5 text-center font-[Inconsolata] whitespace-normal pointer-events-none",
+              "absolute left-1/2 -translate-x-1/2 mt-2 w-[220px] max-w-[calc(100vw-2rem)] px-3 py-2 text-xs sm:text-sm leading-5 text-center font-[Inconsolata] whitespace-normal pointer-events-none",
               RETRO_CLASSES.tooltip
             )}
+            style={{ textWrap: "balance" }}
           >
             {tooltip}
           </m.div>

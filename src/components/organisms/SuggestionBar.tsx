@@ -12,7 +12,7 @@ export default function SuggestionBar({
 }: SuggestionBarProps) {
   return (
     <div
-      className={`flex gap-2 flex-wrap px-2.5 py-2 sm:px-4 sm:py-2.5 font-[Inconsolata] text-[var(--retro-accent-blue-text)] ${RETRO_CLASSES.toolbarRow}`}
+      className={`retro-hide-native-scrollbar flex flex-nowrap gap-1.5 overflow-x-auto px-2.5 py-2 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-4 sm:py-2.5 font-[Inconsolata] text-[var(--retro-accent-blue-text)] ${RETRO_CLASSES.toolbarRow}`}
     >
       {suggestions.map((suggestion) => (
         <SuggestionChip

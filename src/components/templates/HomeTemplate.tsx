@@ -30,6 +30,7 @@ import ResumeWindow from "@/components/organisms/ResumeWindow";
 const STAMP_CULL_MARGIN = 260;
 const CANVAS_GRID_SIZE = 28;
 const CANVAS_GRID_LINE_COLOR = "#d9dcef";
+const MOBILE_DOCK_CLEARANCE_CLASS = "bottom-[calc(env(safe-area-inset-bottom)+5rem)]";
 
 type DesktopWindowId = "terminal" | "about" | "resume";
 
@@ -314,7 +315,7 @@ export default function HomeTemplate() {
 
   return (
     <LazyMotion features={domMax}>
-      <div className="h-screen w-screen overflow-hidden relative">
+      <div className="relative h-[100dvh] w-screen overflow-hidden">
         <MacTopBar />
 
         <div
@@ -360,7 +361,10 @@ export default function HomeTemplate() {
 
         <div
           ref={terminalBoundsRef}
-          className="pointer-events-none absolute inset-x-2 top-8 bottom-24 sm:inset-x-4 sm:top-9 sm:bottom-24"
+          className={cn(
+            "pointer-events-none absolute inset-x-2 top-8 sm:inset-x-4 sm:top-9 sm:bottom-24",
+            MOBILE_DOCK_CLEARANCE_CLASS,
+          )}
           aria-hidden="true"
         />
 
@@ -444,7 +448,8 @@ export default function HomeTemplate() {
 
         <div
           className={cn(
-            "absolute inset-x-0 top-6 bottom-16 sm:bottom-20 pointer-events-none flex items-center justify-center px-2 sm:px-4",
+            "absolute inset-x-0 top-6 pointer-events-none flex items-end justify-center px-2 pt-2 sm:bottom-20 sm:items-center sm:px-4 sm:pt-0",
+            MOBILE_DOCK_CLEARANCE_CLASS,
             activeWindow === "terminal" ? "z-[62]" : "z-[46]",
           )}
         >

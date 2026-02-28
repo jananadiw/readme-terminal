@@ -44,8 +44,8 @@ export const SUGGESTIONS = [
 
 export const TERMINAL_CONFIG = {
   maxWidth: "max-w-5xl",
-  width: "w-[90vw] sm:w-[720px]",
-  height: "h-[80vh] sm:h-[600px]",
+  width: "w-[94vw] sm:w-[720px]",
+  height: "sm:h-[600px]",
   title: "lucky — bash",
 } as const;
 
