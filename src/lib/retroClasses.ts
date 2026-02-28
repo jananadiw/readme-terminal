@@ -27,8 +27,7 @@ export const RETRO_CLASSES = {
     "retro-button inline-flex items-center justify-center font-[var(--font-ui)] font-medium tracking-[0.01em] select-none leading-none transition-[background-color,box-shadow,transform,color] duration-150 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed",
   chipButton:
     "retro-button-solid rounded-[8px] px-2.5 py-1.5 text-xs sm:text-sm border",
-  primaryButton:
-    "retro-button-solid rounded-[8px] px-3 py-2 text-sm border",
+  primaryButton: "retro-button-solid rounded-[8px] px-3 py-2 text-sm border",
   ghostButton:
     "rounded-[8px] px-3 py-2 text-sm border border-transparent bg-transparent text-[var(--retro-text-primary)] hover:bg-[var(--retro-surface)]",
   panelLink:

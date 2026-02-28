@@ -180,6 +180,30 @@ body {
     outline-offset: 1px;
 }
 
+.retro-inline-link {
+    color: var(--retro-accent-blue-text);
+    text-decoration: underline;
+    text-decoration-color: var(--retro-accent-blue);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 2px;
+    border-radius: 1px;
+    padding-inline: 2px;
+    margin-inline: -2px;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    transition:
+        color 140ms ease,
+        background-color 140ms ease,
+        text-decoration-color 140ms ease;
+}
+
+.retro-inline-link:hover,
+.retro-inline-link:focus-visible {
+    color: var(--retro-inset);
+    background-color: var(--retro-accent-blue);
+    text-decoration-color: transparent;
+}
+
 .retro-hide-native-scrollbar {
     scrollbar-width: none;
 }

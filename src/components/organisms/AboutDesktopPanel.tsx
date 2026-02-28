@@ -45,10 +45,7 @@ function renderParagraphWithLinks(paragraph: string): ReactNode[] {
         href={href}
         target="_blank"
         rel="noreferrer"
-        className={cn(
-          "underline underline-offset-2 decoration-[var(--retro-accent-blue)] hover:text-[var(--retro-accent-blue)] rounded-[2px]",
-          RETRO_CLASSES.focusRing
-        )}
+        className={cn("retro-inline-link", RETRO_CLASSES.focusRing)}
       >
         {segment}
       </a>

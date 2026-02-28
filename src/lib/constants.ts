@@ -28,8 +28,16 @@ export const HELP_TEXT = `Available commands:
 
 Or just type a question!`;
 
+export const QUICK_WHOAMI_RESPONSE =
+  "I'm Jananadi, product focused software engineer tinkering with UI/UX design, with 8 years of experience.";
+
+export const DEFAULT_TERMINAL_QUESTION = "What do you do?";
+
+export const DEFAULT_TERMINAL_RESPONSE =
+  "I'm a software engineer, but lately, I've been mixing things up by building tools for efficient workflows and dabbling in product and UI/UX design. Right now, I'm focused on my project LinkMap and helping out as a freelance front-end lead at Daxe AI.";
+
 export const SUGGESTIONS = [
-  "What do you do?",
+  DEFAULT_TERMINAL_QUESTION,
   "Tell me about your projects",
   "Where are you based?",
 ] as const;

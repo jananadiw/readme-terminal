@@ -31,15 +31,9 @@ const STAMP_CULL_MARGIN = 260;
 const CANVAS_GRID_SIZE = 28;
 const CANVAS_GRID_LINE_COLOR = "#d9dcef";
 
-interface HomeTemplateProps {
-  initialWhoamiContent: string;
-}
-
 type DesktopWindowId = "terminal" | "about" | "resume";
 
-export default function HomeTemplate({
-  initialWhoamiContent,
-}: HomeTemplateProps) {
+export default function HomeTemplate() {
   const { stampPositions } = useStampPositions();
   const {
     history,
@@ -50,7 +44,7 @@ export default function HomeTemplate({
     inputRef,
     streaming,
     cancelAutoType,
-  } = useTerminal(initialWhoamiContent);
+  } = useTerminal();
   const prefersReducedMotion = useReducedMotion();
 
   const offsetX = useMotionValue(0);

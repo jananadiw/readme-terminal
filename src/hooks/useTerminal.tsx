@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { HistoryItem } from "@/lib/types";
-import { processCommand } from "@/lib/commands";
+import { isAnimatedLocalCommand, processCommand } from "@/lib/commands";
+import { DEFAULT_TERMINAL_QUESTION } from "@/lib/constants";
 import WelcomeMessage from "@/components/organisms/WelcomeMessage";
 
-const AUTO_TYPE_PHRASE = "What do you do?";
 const AUTO_TYPE_DELAY_MS = 1200; // delay before typing starts
 const AUTO_TYPE_CHAR_MS = 70; // ms per character
+const LOCAL_RESPONSE_CHAR_MS = 18;
 
-export function useTerminal(whoamiContent: string) {
+export function useTerminal() {
   const [history, setHistory] = useState<HistoryItem[]>([
     { type: "output", content: <WelcomeMessage /> },
   ]);
@@ -19,6 +20,7 @@ export function useTerminal(whoamiContent: string) {
   const focusRafRef = useRef<number>(0);
   const autoTypeCancelled = useRef(false);
   const autoTypeTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const localResponseTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const handleSubmitRef = useRef<(value: string) => void>(() => {});
 
   const resetInputCursor = useCallback(() => {
@@ -49,6 +51,56 @@ export function useTerminal(whoamiContent: string) {
       scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
     }
   }, [history]);
+
+  const clearLocalResponseTimers = useCallback(() => {
+    localResponseTimers.current.forEach(clearTimeout);
+    localResponseTimers.current = [];
+  }, []);
+
+  const animateLocalResponse = useCallback(
+    (response: string) => {
+      clearLocalResponseTimers();
+
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        setHistory((h) => {
+          const updated = [...h];
+          updated[updated.length - 1] = {
+            type: "output",
+            content: response,
+          };
+          return updated;
+        });
+        resetInputCursor();
+        return;
+      }
+
+      setStreaming(true);
+
+      for (let i = 0; i < response.length; i++) {
+        const timer = setTimeout(() => {
+          const current = response.slice(0, i + 1);
+
+          setHistory((h) => {
+            const updated = [...h];
+            updated[updated.length - 1] = {
+              type: "output",
+              content: current,
+            };
+            return updated;
+          });
+
+          if (i === response.length - 1) {
+            clearLocalResponseTimers();
+            setStreaming(false);
+            resetInputCursor();
+          }
+        }, i * LOCAL_RESPONSE_CHAR_MS);
+
+        localResponseTimers.current.push(timer);
+      }
+    },
+    [clearLocalResponseTimers, resetInputCursor]
+  );
 
   const streamLLM = useCallback(async (question: string) => {
     setStreaming(true);
@@ -120,7 +172,6 @@ export function useTerminal(whoamiContent: string) {
 
       const output = processCommand(
         value,
-        whoamiContent,
         <WelcomeMessage hasOutput />,
         setHistory
       );
@@ -135,6 +186,16 @@ export function useTerminal(whoamiContent: string) {
         setInput("");
         resetInputCursor();
         streamLLM(value);
+      } else if (typeof output === "string" && isAnimatedLocalCommand(value)) {
+        setHistory((h) => [
+          { type: "output", content: <WelcomeMessage hasOutput /> },
+          ...h.slice(1),
+          { type: "input", content: value },
+          { type: "output", content: "..." },
+        ]);
+        setInput("");
+        resetInputCursor();
+        animateLocalResponse(output);
       } else {
         setHistory((h) => [
           { type: "output", content: <WelcomeMessage hasOutput /> },
@@ -146,7 +207,7 @@ export function useTerminal(whoamiContent: string) {
         resetInputCursor();
       }
     },
-    [input, streaming, whoamiContent, streamLLM, resetInputCursor]
+    [animateLocalResponse, input, streaming, streamLLM, resetInputCursor]
   );
 
   // Keep ref in sync so the auto-type timer can call the latest handleSubmit
@@ -165,10 +226,10 @@ export function useTerminal(whoamiContent: string) {
     const startTimer = setTimeout(() => {
       if (autoTypeCancelled.current) return;
 
-      for (let i = 0; i < AUTO_TYPE_PHRASE.length; i++) {
+      for (let i = 0; i < DEFAULT_TERMINAL_QUESTION.length; i++) {
         const charTimer = setTimeout(() => {
           if (autoTypeCancelled.current) return;
-          setInput(AUTO_TYPE_PHRASE.slice(0, i + 1));
+          setInput(DEFAULT_TERMINAL_QUESTION.slice(0, i + 1));
         }, i * AUTO_TYPE_CHAR_MS);
         autoTypeTimers.current.push(charTimer);
       }
@@ -177,8 +238,8 @@ export function useTerminal(whoamiContent: string) {
       const submitTimer = setTimeout(() => {
         if (autoTypeCancelled.current) return;
         autoTypeCancelled.current = true;
-        handleSubmitRef.current(AUTO_TYPE_PHRASE);
-      }, AUTO_TYPE_PHRASE.length * AUTO_TYPE_CHAR_MS + 400);
+        handleSubmitRef.current(DEFAULT_TERMINAL_QUESTION);
+      }, DEFAULT_TERMINAL_QUESTION.length * AUTO_TYPE_CHAR_MS + 400);
       autoTypeTimers.current.push(submitTimer);
     }, AUTO_TYPE_DELAY_MS);
 
@@ -193,10 +254,11 @@ export function useTerminal(whoamiContent: string) {
   // Cleanup RAF on unmount
   useEffect(() => {
     return () => {
+      clearLocalResponseTimers();
       cancelAnimationFrame(rafRef.current);
       cancelAnimationFrame(focusRafRef.current);
     };
-  }, []);
+  }, [clearLocalResponseTimers]);
 
   return {
     history,
