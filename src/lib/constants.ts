@@ -114,7 +114,7 @@ export const ABOUT_PANEL_CONTENT: AboutPanelContent = {
     {
       id: "resume",
       label: "Resume",
-      href: "https://drive.google.com/file/d/1ZmFAUx4e09y2YHM9s7r9dvie9fVSc4KR/view?pli=1",
+      action: "resume",
     },
     { id: "blog", label: "Blog", href: "https://www.jananadiw.com/blog" },
   ],

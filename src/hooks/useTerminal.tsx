@@ -3,6 +3,10 @@ import { HistoryItem } from "@/lib/types";
 import { processCommand } from "@/lib/commands";
 import WelcomeMessage from "@/components/organisms/WelcomeMessage";
 
+const AUTO_TYPE_PHRASE = "What do you do?";
+const AUTO_TYPE_DELAY_MS = 1200; // delay before typing starts
+const AUTO_TYPE_CHAR_MS = 70; // ms per character
+
 export function useTerminal(whoamiContent: string) {
   const [history, setHistory] = useState<HistoryItem[]>([
     { type: "output", content: <WelcomeMessage /> },
@@ -13,6 +17,9 @@ export function useTerminal(whoamiContent: string) {
   const inputRef = useRef<HTMLInputElement>(null);
   const rafRef = useRef<number>(0);
   const focusRafRef = useRef<number>(0);
+  const autoTypeCancelled = useRef(false);
+  const autoTypeTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const handleSubmitRef = useRef<(value: string) => void>(() => {});
 
   const resetInputCursor = useCallback(() => {
     cancelAnimationFrame(focusRafRef.current);
@@ -26,6 +33,15 @@ export function useTerminal(whoamiContent: string) {
         // Some browsers can throw if the input is temporarily disabled.
       }
     });
+  }, []);
+
+  // Cancel auto-type when user interacts
+  const cancelAutoType = useCallback(() => {
+    if (!autoTypeCancelled.current) {
+      autoTypeCancelled.current = true;
+      autoTypeTimers.current.forEach(clearTimeout);
+      autoTypeTimers.current = [];
+    }
   }, []);
 
   useEffect(() => {
@@ -42,6 +58,10 @@ export function useTerminal(whoamiContent: string) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question }),
       });
+      if (!res.ok) {
+        const message = (await res.text()).trim();
+        throw new Error(message || "Request failed.");
+      }
       if (!res.body) throw new Error("No stream");
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -74,12 +94,17 @@ export function useTerminal(whoamiContent: string) {
       // Final flush to ensure last chunk is rendered
       cancelAnimationFrame(rafRef.current);
       flush();
-    } catch {
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Something went wrong. Try again!";
+
       setHistory((h) => {
         const updated = [...h];
         updated[updated.length - 1] = {
           type: "output",
-          content: "Something went wrong. Try again!",
+          content: message,
         };
         return updated;
       });
@@ -124,6 +149,47 @@ export function useTerminal(whoamiContent: string) {
     [input, streaming, whoamiContent, streamLLM, resetInputCursor]
   );
 
+  // Keep ref in sync so the auto-type timer can call the latest handleSubmit
+  useEffect(() => {
+    handleSubmitRef.current = handleSubmit;
+  }, [handleSubmit]);
+
+  // Auto-type effect on first load
+  useEffect(() => {
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) {
+      autoTypeCancelled.current = true;
+      return;
+    }
+
+    const startTimer = setTimeout(() => {
+      if (autoTypeCancelled.current) return;
+
+      for (let i = 0; i < AUTO_TYPE_PHRASE.length; i++) {
+        const charTimer = setTimeout(() => {
+          if (autoTypeCancelled.current) return;
+          setInput(AUTO_TYPE_PHRASE.slice(0, i + 1));
+        }, i * AUTO_TYPE_CHAR_MS);
+        autoTypeTimers.current.push(charTimer);
+      }
+
+      // Auto-submit after typing finishes
+      const submitTimer = setTimeout(() => {
+        if (autoTypeCancelled.current) return;
+        autoTypeCancelled.current = true;
+        handleSubmitRef.current(AUTO_TYPE_PHRASE);
+      }, AUTO_TYPE_PHRASE.length * AUTO_TYPE_CHAR_MS + 400);
+      autoTypeTimers.current.push(submitTimer);
+    }, AUTO_TYPE_DELAY_MS);
+
+    autoTypeTimers.current.push(startTimer);
+
+    return () => {
+      autoTypeTimers.current.forEach(clearTimeout);
+      autoTypeTimers.current = [];
+    };
+  }, []);
+
   // Cleanup RAF on unmount
   useEffect(() => {
     return () => {
@@ -140,5 +206,6 @@ export function useTerminal(whoamiContent: string) {
     scrollRef,
     inputRef,
     streaming,
+    cancelAutoType,
   };
 }

@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
-import { Inconsolata } from "next/font/google";
+import { Inconsolata, Manrope } from "next/font/google";
 import "./globals.css";
 
 const inconsolata = Inconsolata({
   subsets: ["latin"],
+});
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-ui",
 });
 
 export const metadata: Metadata = {
@@ -19,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inconsolata.className} antialiased`}
+        className={`${inconsolata.className} ${manrope.variable} antialiased`}
         suppressHydrationWarning
       >
         {children}

@@ -28,11 +28,11 @@ export default function MacTopBar() {
     <header
       role="banner"
       className={`fixed inset-x-0 top-0 z-[90] ${RETRO_CLASSES.topBar}`}
-      style={{ backgroundColor: "#B7BFF5" }}
+      style={{ backgroundColor: "e2e5ff" }}
     >
       <div
         className="mx-auto flex h-full w-full items-center justify-between px-2 sm:px-3 font-[Inconsolata] text-[11px] sm:text-xs text-[var(--retro-text-chrome)] tracking-[0.04em]"
-        style={{ color: "#112DE8" }}
+        style={{ color: "#2a3cb5" }}
       >
         <div className="truncate font-medium">JananadiW</div>
         <div className="ml-3 flex items-center gap-2 sm:gap-2.5 whitespace-nowrap">

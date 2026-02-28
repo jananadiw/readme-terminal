@@ -25,14 +25,21 @@ import TerminalWindow from "@/components/organisms/TerminalWindow";
 import MacTopBar from "@/components/organisms/MacTopBar";
 import MacFileDock from "@/components/organisms/MacFileDock";
 import AboutDesktopPanel from "@/components/organisms/AboutDesktopPanel";
+import ResumeWindow from "@/components/organisms/ResumeWindow";
 
 const STAMP_CULL_MARGIN = 260;
+const CANVAS_GRID_SIZE = 28;
+const CANVAS_GRID_LINE_COLOR = "#d9dcef";
 
 interface HomeTemplateProps {
   initialWhoamiContent: string;
 }
 
-export default function HomeTemplate({ initialWhoamiContent }: HomeTemplateProps) {
+type DesktopWindowId = "terminal" | "about" | "resume";
+
+export default function HomeTemplate({
+  initialWhoamiContent,
+}: HomeTemplateProps) {
   const { stampPositions } = useStampPositions();
   const {
     history,
@@ -42,6 +49,7 @@ export default function HomeTemplate({ initialWhoamiContent }: HomeTemplateProps
     scrollRef,
     inputRef,
     streaming,
+    cancelAutoType,
   } = useTerminal(initialWhoamiContent);
   const prefersReducedMotion = useReducedMotion();
 
@@ -53,21 +61,20 @@ export default function HomeTemplate({ initialWhoamiContent }: HomeTemplateProps
   const panSyncRafRef = useRef<number | null>(null);
   const latestCanvasOffsetRef = useRef({ x: 0, y: 0 });
 
-  const [minimized, setMinimized] = useState(false);
-  const [activeDockPanelId, setActiveDockPanelId] =
-    useState<DesktopDockItemId | null>(null);
-  const [activeWindow, setActiveWindow] = useState<"terminal" | "about" | null>(
-    "terminal"
-  );
+  const [isTerminalOpen, setIsTerminalOpen] = useState(true);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isResumeOpen, setIsResumeOpen] = useState(false);
+  const [activeWindow, setActiveWindow] = useState<DesktopWindowId | null>("terminal");
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
   const dragControls = useDragControls();
   const aboutDragControls = useDragControls();
+  const resumeDragControls = useDragControls();
   const terminalBoundsRef = useRef<HTMLDivElement>(null);
 
   const updateGridPosition = useCallback((x: number, y: number) => {
     if (gridRef.current) {
-      gridRef.current.style.backgroundPosition = `${((x % 24) + 24) % 24}px ${((y % 24) + 24) % 24}px`;
+      gridRef.current.style.backgroundPosition = `${((x % CANVAS_GRID_SIZE) + CANVAS_GRID_SIZE) % CANVAS_GRID_SIZE}px ${((y % CANVAS_GRID_SIZE) + CANVAS_GRID_SIZE) % CANVAS_GRID_SIZE}px`;
     }
   }, []);
 
@@ -86,7 +93,7 @@ export default function HomeTemplate({ initialWhoamiContent }: HomeTemplateProps
       updateGridPosition(x, y);
       scheduleCanvasOffsetSync();
     },
-    [scheduleCanvasOffsetSync, updateGridPosition]
+    [scheduleCanvasOffsetSync, updateGridPosition],
   );
 
   useEffect(() => {
@@ -153,45 +160,110 @@ export default function HomeTemplate({ initialWhoamiContent }: HomeTemplateProps
     requestAnimationFrame(() => inputRef.current?.focus());
   }, [inputRef]);
 
-  const hideTerminalWindow = useCallback(() => {
-    setMinimized(true);
-    setActiveWindow(activeDockPanelId === "about" ? "about" : null);
-  }, [activeDockPanelId]);
+  const getFallbackActiveWindow = useCallback(
+    (closedWindow: DesktopWindowId) => {
+      if (closedWindow !== "terminal" && isTerminalOpen) return "terminal";
+      if (closedWindow !== "resume" && isResumeOpen) return "resume";
+      if (closedWindow !== "about" && isAboutOpen) return "about";
+      return null;
+    },
+    [isAboutOpen, isResumeOpen, isTerminalOpen],
+  );
+
+  const closeTerminalWindow = useCallback(() => {
+    setIsTerminalOpen(false);
+    setActiveWindow((current) =>
+      current === "terminal" ? getFallbackActiveWindow("terminal") : current,
+    );
+  }, [getFallbackActiveWindow]);
+
+  const closeAboutWindow = useCallback(() => {
+    setIsAboutOpen(false);
+    setActiveWindow((current) =>
+      current === "about" ? getFallbackActiveWindow("about") : current,
+    );
+  }, [getFallbackActiveWindow]);
+
+  const closeResumeWindow = useCallback(() => {
+    setIsResumeOpen(false);
+    setActiveWindow((current) =>
+      current === "resume" ? getFallbackActiveWindow("resume") : current,
+    );
+  }, [getFallbackActiveWindow]);
+
+  const openTerminalWindow = useCallback(() => {
+    setIsTerminalOpen(true);
+    setActiveWindow("terminal");
+    focusTerminalInput();
+  }, [focusTerminalInput]);
+
+  const openAboutWindow = useCallback(() => {
+    setIsAboutOpen(true);
+    setActiveWindow("about");
+  }, []);
+
+  const openResumeWindow = useCallback(() => {
+    setIsResumeOpen(true);
+    setActiveWindow("resume");
+  }, []);
 
   const handleDockItemClick = useCallback(
     (id: DesktopDockItemId) => {
       if (id === "about") {
-        setActiveDockPanelId((current) => {
-          const next = current === "about" ? null : "about";
-          setActiveWindow(next ? "about" : minimized ? null : "terminal");
-          return next;
-        });
+        if (isAboutOpen) {
+          closeAboutWindow();
+          return;
+        }
+
+        openAboutWindow();
         return;
       }
 
       if (id === "terminal") {
-        setMinimized(false);
-        setActiveWindow("terminal");
-        focusTerminalInput();
+        if (isTerminalOpen) {
+          closeTerminalWindow();
+          return;
+        }
+
+        openTerminalWindow();
         return;
       }
 
-      // Resume shortcut is visual-only for now (icon placeholder per current scope).
+      if (isResumeOpen) {
+        closeResumeWindow();
+        return;
+      }
+
+      openResumeWindow();
     },
-    [focusTerminalInput, minimized]
+    [
+      closeAboutWindow,
+      closeResumeWindow,
+      closeTerminalWindow,
+      isAboutOpen,
+      isResumeOpen,
+      isTerminalOpen,
+      openAboutWindow,
+      openResumeWindow,
+      openTerminalWindow,
+    ],
   );
 
   const handleAboutLinkAction = useCallback(() => {
-    // Resume action intentionally left as a placeholder for a future file/link.
-  }, []);
+    openResumeWindow();
+  }, [openResumeWindow]);
 
   useEffect(() => {
-    if (activeDockPanelId !== "about") return;
+    if (activeWindow !== "about" && activeWindow !== "resume") return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setActiveDockPanelId(null);
-        setActiveWindow(minimized ? null : "terminal");
+        if (activeWindow === "about") {
+          closeAboutWindow();
+          return;
+        }
+
+        closeResumeWindow();
       }
     };
 
@@ -199,18 +271,21 @@ export default function HomeTemplate({ initialWhoamiContent }: HomeTemplateProps
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [activeDockPanelId, minimized]);
+  }, [activeWindow, closeAboutWindow, closeResumeWindow]);
 
   const activeDockIds = useMemo(() => {
     const activeIds: DesktopDockItemId[] = [];
-    if (activeDockPanelId === "about" && activeWindow === "about") {
+    if (isAboutOpen) {
       activeIds.push("about");
     }
-    if (!minimized && activeWindow === "terminal") {
+    if (isResumeOpen) {
+      activeIds.push("resume");
+    }
+    if (isTerminalOpen) {
       activeIds.push("terminal");
     }
     return activeIds;
-  }, [activeDockPanelId, minimized, activeWindow]);
+  }, [isAboutOpen, isResumeOpen, isTerminalOpen]);
 
   const noMotion = prefersReducedMotion ?? false;
   const visibleStamps = useMemo(() => {
@@ -245,18 +320,15 @@ export default function HomeTemplate({ initialWhoamiContent }: HomeTemplateProps
 
   return (
     <LazyMotion features={domMax}>
-      <div
-        className="h-screen w-screen overflow-hidden relative"
-      >
+      <div className="h-screen w-screen overflow-hidden relative">
         <MacTopBar />
 
         <div
           ref={gridRef}
           className="absolute inset-0"
           style={{
-            backgroundImage:
-              "radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px)",
-            backgroundSize: "24px 24px",
+            backgroundImage: `linear-gradient(to right, ${CANVAS_GRID_LINE_COLOR} 1px, transparent 1px), linear-gradient(to bottom, ${CANVAS_GRID_LINE_COLOR} 1px, transparent 1px)`,
+            backgroundSize: `${CANVAS_GRID_SIZE}px ${CANVAS_GRID_SIZE}px`,
           }}
         />
 
@@ -301,11 +373,11 @@ export default function HomeTemplate({ initialWhoamiContent }: HomeTemplateProps
         <div
           className={cn(
             "absolute inset-x-0 top-6 bottom-16 sm:bottom-20 pointer-events-none flex items-center justify-center px-3 sm:px-5",
-            activeWindow === "about" ? "z-[62]" : "z-[46]"
+            activeWindow === "about" ? "z-[62]" : "z-[46]",
           )}
         >
           <AnimatePresence>
-            {activeDockPanelId === "about" && (
+            {isAboutOpen && (
               <m.div
                 key="about-panel"
                 drag
@@ -330,10 +402,7 @@ export default function HomeTemplate({ initialWhoamiContent }: HomeTemplateProps
                     event.stopPropagation();
                     aboutDragControls.start(event);
                   }}
-                  onClose={() => {
-                    setActiveDockPanelId(null);
-                    setActiveWindow(minimized ? null : "terminal");
-                  }}
+                  onClose={closeAboutWindow}
                   onLinkAction={handleAboutLinkAction}
                 />
               </m.div>
@@ -343,12 +412,50 @@ export default function HomeTemplate({ initialWhoamiContent }: HomeTemplateProps
 
         <div
           className={cn(
+            "absolute inset-x-0 top-6 bottom-16 sm:bottom-20 pointer-events-none flex items-center justify-center px-3 sm:px-5",
+            activeWindow === "resume" ? "z-[62]" : "z-[46]",
+          )}
+        >
+          <AnimatePresence>
+            {isResumeOpen && (
+              <m.div
+                key="resume-panel"
+                drag
+                dragControls={resumeDragControls}
+                dragListener={false}
+                dragMomentum={false}
+                dragElastic={0}
+                dragConstraints={terminalBoundsRef}
+                initial={noMotion ? false : { opacity: 0, y: 12, scale: 0.99 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.99 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                className="pointer-events-auto"
+                style={{ willChange: "transform, opacity" }}
+              >
+                <ResumeWindow
+                  active={activeWindow === "resume"}
+                  onActivate={() => setActiveWindow("resume")}
+                  onTitleBarPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    resumeDragControls.start(event);
+                  }}
+                  onClose={closeResumeWindow}
+                />
+              </m.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div
+          className={cn(
             "absolute inset-x-0 top-6 bottom-16 sm:bottom-20 pointer-events-none flex items-center justify-center px-2 sm:px-4",
-            activeWindow === "terminal" ? "z-[62]" : "z-[46]"
+            activeWindow === "terminal" ? "z-[62]" : "z-[46]",
           )}
         >
           <AnimatePresence mode="wait">
-            {!minimized ? (
+            {isTerminalOpen ? (
               <m.div
                 key="terminal"
                 drag
@@ -373,12 +480,21 @@ export default function HomeTemplate({ initialWhoamiContent }: HomeTemplateProps
                 <TerminalWindow
                   history={history}
                   input={input}
-                  onInputChange={setInput}
-                  onSubmit={() => handleSubmit()}
-                  onSuggestionClick={handleSubmit}
+                  onInputChange={(v) => {
+                    cancelAutoType();
+                    setInput(v);
+                  }}
+                  onSubmit={() => {
+                    cancelAutoType();
+                    handleSubmit();
+                  }}
+                  onSuggestionClick={(s) => {
+                    cancelAutoType();
+                    handleSubmit(s);
+                  }}
                   inputRef={inputRef}
                   scrollRef={scrollRef}
-                  onClose={hideTerminalWindow}
+                  onClose={closeTerminalWindow}
                   dragControls={dragControls}
                   streaming={streaming}
                   active={activeWindow === "terminal"}

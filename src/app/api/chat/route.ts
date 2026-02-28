@@ -5,8 +5,42 @@ import OpenAI from "openai";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const context = readFileSync(join(process.cwd(), "whoami.md"), "utf-8");
 
+async function readQuestion(req: Request) {
+  const rawBody = await req.text();
+
+  if (!rawBody.trim()) {
+    return { error: "Request body is required." } as const;
+  }
+
+  try {
+    const parsed = JSON.parse(rawBody) as { question?: unknown };
+    const question =
+      typeof parsed.question === "string" ? parsed.question.trim() : "";
+
+    if (!question) {
+      return { error: "Question is required." } as const;
+    }
+
+    return { question } as const;
+  } catch {
+    return { error: "Request body must be valid JSON." } as const;
+  }
+}
+
 export async function POST(req: Request) {
-  const { question } = await req.json();
+  const payload = await readQuestion(req);
+
+  if ("error" in payload) {
+    return new Response(payload.error, {
+      status: 400,
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    });
+  }
+
+  const { question } = payload;
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

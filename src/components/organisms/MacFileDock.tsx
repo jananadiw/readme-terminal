@@ -16,20 +16,26 @@ const DOCK_ICON_ASSETS: Record<
   { closedSrc: string; openSrc: string }
 > = {
   about: {
-    closedSrc: "/icons/fileIcon.png",
-    openSrc: "/icons/fileOpenIcon.png",
+    closedSrc: "/icons/aboutClose.png",
+    openSrc: "/icons/aboutOpen.png",
   },
   terminal: {
-    closedSrc: "/icons/termCloseIcon.png",
-    openSrc: "/icons/termOpenIcon.png",
+    closedSrc: "/icons/terminalClose.png",
+    openSrc: "/icons/terminalOpen.png",
   },
   resume: {
-    closedSrc: "/icons/resumeIcon.png",
-    openSrc: "/icons/resumeOpenIcon.png",
+    closedSrc: "/icons/resumeClose.png",
+    openSrc: "/icons/resumeOpen.png",
   },
 };
 
-function DockItemIcon({ id, active }: { id: DesktopDockItemId; active: boolean }) {
+function DockItemIcon({
+  id,
+  active,
+}: {
+  id: DesktopDockItemId;
+  active: boolean;
+}) {
   const assets = DOCK_ICON_ASSETS[id];
   const src = active ? assets.openSrc : assets.closedSrc;
 
@@ -60,14 +66,9 @@ export default function MacFileDock({
   return (
     <div
       data-file-dock
-      className="fixed bottom-[max(10px,env(safe-area-inset-bottom))] left-1/2 z-[90] -translate-x-1/2 pointer-events-auto"
+      className="fixed bottom-[max(10px,env(safe-area-inset-bottom))] left-1/2 z-[90] -translate-x-1/2 pointer-events-auto opacity-95"
     >
-      <div
-        className={cn(
-          "px-2 py-2 sm:px-3",
-          RETRO_CLASSES.surface
-        )}
-      >
+      <div className={cn("px-2 py-2 sm:px-3", RETRO_CLASSES.surface)}>
         <div className="flex items-end gap-1.5 sm:gap-3">
           {items.map((item) => {
             const active = activeSet.has(item.id);
@@ -82,7 +83,7 @@ export default function MacFileDock({
                   RETRO_CLASSES.dockItemBase,
                   RETRO_CLASSES.focusRing,
                   "bg-transparent shadow-none hover:bg-transparent active:bg-transparent",
-                  active ? "opacity-100" : "opacity-95 hover:opacity-100"
+                  active ? "opacity-100" : "opacity-95 hover:opacity-100",
                 )}
                 onClick={() => onItemClick(item.id)}
               >
@@ -92,7 +93,7 @@ export default function MacFileDock({
                     "mt-1 font-[Inconsolata] text-[10px] sm:text-[11px] leading-none tracking-[0.03em]",
                     active
                       ? "text-[var(--retro-accent-blue-text)]"
-                      : "text-[var(--retro-text-chrome)]"
+                      : "text-[var(--retro-text-chrome)]",
                   )}
                 >
                   {item.label}

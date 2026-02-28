@@ -16,12 +16,13 @@ import { RETRO_CLASSES } from "@/lib/retroClasses";
 const SCROLL_BUTTON_SIZE = 15;
 const MIN_THUMB_SIZE = 14;
 
-type ScrollAxis = "y";
+type ScrollAxis = "x" | "y";
 
 interface WindowContentAreaProps extends HTMLAttributes<HTMLDivElement> {
   keyboardScrollable?: boolean;
   active?: boolean;
   viewportClassName?: string;
+  horizontalScrollbar?: boolean;
 }
 
 function getScrollDeltaY(key: string, el: HTMLDivElement) {
@@ -41,6 +42,28 @@ function getScrollDeltaY(key: string, el: HTMLDivElement) {
       return { top: -el.scrollTop };
     case "End":
       return { top: el.scrollHeight };
+    default:
+      return null;
+  }
+}
+
+function getScrollDeltaX(key: string, el: HTMLDivElement) {
+  const lineStep = 32;
+  const pageStep = Math.max(el.clientWidth - 32, 48);
+
+  switch (key) {
+    case "ArrowLeft":
+      return { left: -lineStep };
+    case "ArrowRight":
+      return { left: lineStep };
+    case "PageUp":
+      return { left: -pageStep };
+    case "PageDown":
+      return { left: pageStep };
+    case "Home":
+      return { left: -el.scrollLeft };
+    case "End":
+      return { left: el.scrollWidth };
     default:
       return null;
   }
@@ -108,14 +131,28 @@ function axisThumbMetrics(metrics: ScrollMetrics, axis: ScrollAxis) {
   };
 }
 
-function ScrollArrow({ direction }: { direction: "up" | "down" }) {
+function ScrollArrow({
+  direction,
+}: {
+  direction: "up" | "down" | "left" | "right";
+}) {
   if (direction === "up") {
     return (
       <span className="h-0 w-0 border-x-[4px] border-x-transparent border-b-[6px] border-b-[var(--retro-text-chrome)]" />
     );
   }
+  if (direction === "down") {
+    return (
+      <span className="h-0 w-0 border-x-[4px] border-x-transparent border-t-[6px] border-t-[var(--retro-text-chrome)]" />
+    );
+  }
+  if (direction === "left") {
+    return (
+      <span className="h-0 w-0 border-y-[4px] border-y-transparent border-r-[6px] border-r-[var(--retro-text-chrome)]" />
+    );
+  }
   return (
-    <span className="h-0 w-0 border-x-[4px] border-x-transparent border-t-[6px] border-t-[var(--retro-text-chrome)]" />
+    <span className="h-0 w-0 border-y-[4px] border-y-transparent border-l-[6px] border-l-[var(--retro-text-chrome)]" />
   );
 }
 
@@ -123,6 +160,7 @@ function WindowContentAreaImpl(
   {
     keyboardScrollable = true,
     active = true,
+    horizontalScrollbar = false,
     className,
     viewportClassName,
     tabIndex,
@@ -201,43 +239,69 @@ function WindowContentAreaImpl(
       const target = event.currentTarget;
       const vertical = getScrollDeltaY(event.key, target);
 
-      if (!vertical) return;
+      if (vertical) {
+        event.preventDefault();
+        target.scrollBy({
+          top: vertical.top,
+          behavior: "auto",
+        });
+        return;
+      }
+
+      if (!horizontalScrollbar) return;
+
+      const horizontal = getScrollDeltaX(event.key, target);
+      if (!horizontal) return;
 
       event.preventDefault();
-
       target.scrollBy({
-        top: vertical.top,
+        left: horizontal.left,
         behavior: "auto",
       });
     },
-    [keyboardScrollable, onKeyDown]
+    [horizontalScrollbar, keyboardScrollable, onKeyDown]
   );
 
   const scrollByAxis = useCallback((axis: ScrollAxis, amount: number) => {
     const el = viewportRef.current;
     if (!el) return;
-    el.scrollBy({
-      top: amount,
-      behavior: "auto",
-    });
+    el.scrollBy(
+      axis === "y"
+        ? {
+            top: amount,
+            behavior: "auto",
+          }
+        : {
+            left: amount,
+            behavior: "auto",
+          }
+    );
     syncMetrics();
   }, [syncMetrics]);
 
   const setScrollByAxis = useCallback((axis: ScrollAxis, amount: number) => {
     const el = viewportRef.current;
     if (!el) return;
-    el.scrollTo({
-      top: amount,
-      behavior: "auto",
-    });
+    el.scrollTo(
+      axis === "y"
+        ? {
+            top: amount,
+            behavior: "auto",
+          }
+        : {
+            left: amount,
+            behavior: "auto",
+          }
+    );
     syncMetrics();
   }, [syncMetrics]);
 
   const vertical = axisThumbMetrics(metrics, "y");
+  const horizontal = axisThumbMetrics(metrics, "x");
 
   const handleTrackPointerDown = useCallback(
     (axis: ScrollAxis, clientPos: number, trackRectStart: number) => {
-      const axisMetrics = vertical;
+      const axisMetrics = axis === "y" ? vertical : horizontal;
       const pointerPos = clientPos - trackRectStart;
       const thumbStart = axisMetrics.thumbPos;
       const thumbEnd = axisMetrics.thumbPos + axisMetrics.thumbSize;
@@ -248,7 +312,7 @@ function WindowContentAreaImpl(
         scrollByAxis(axis, axisMetrics.pageStep);
       }
     },
-    [scrollByAxis, vertical]
+    [horizontal, scrollByAxis, vertical]
   );
 
   const beginThumbDrag = useCallback(
@@ -265,7 +329,7 @@ function WindowContentAreaImpl(
         axis,
         pointerId,
         startCoord: clientCoord,
-        startScroll: el.scrollTop,
+        startScroll: axis === "y" ? el.scrollTop : el.scrollLeft,
       };
 
       currentTarget.setPointerCapture(pointerId);
@@ -282,7 +346,8 @@ function WindowContentAreaImpl(
       const axisMetrics = axisThumbMetrics(readMetrics(el), drag.axis);
       const thumbTravel = Math.max(axisMetrics.trackSize - axisMetrics.thumbSize, 1);
       const maxScroll = Math.max(axisMetrics.maxScroll, 1);
-      const deltaCoord = event.clientY - drag.startCoord;
+      const deltaCoord =
+        (drag.axis === "y" ? event.clientY : event.clientX) - drag.startCoord;
       const nextScroll = drag.startScroll + (deltaCoord / thumbTravel) * maxScroll;
 
       setScrollByAxis(
@@ -308,14 +373,17 @@ function WindowContentAreaImpl(
       if (!el) return;
 
       const lineStep = 32;
-      const pageStep = Math.max(el.clientHeight - 32, 48);
+      const pageStep =
+        axis === "y"
+          ? Math.max(el.clientHeight - 32, 48)
+          : Math.max(el.clientWidth - 32, 48);
 
       switch (event.key) {
-        case "ArrowUp":
+        case axis === "y" ? "ArrowUp" : "ArrowLeft":
           event.preventDefault();
           scrollByAxis(axis, -lineStep);
           break;
-        case "ArrowDown":
+        case axis === "y" ? "ArrowDown" : "ArrowRight":
           event.preventDefault();
           scrollByAxis(axis, lineStep);
           break;
@@ -347,7 +415,10 @@ function WindowContentAreaImpl(
       data-window-content-shell
       data-window-active={active ? "true" : "false"}
       className={cn(
-        "grid min-h-0 min-w-0 grid-cols-[minmax(0,1fr)_15px]",
+        "grid min-h-0 min-w-0",
+        horizontalScrollbar
+          ? "grid-cols-[minmax(0,1fr)_15px] grid-rows-[minmax(0,1fr)_15px]"
+          : "grid-cols-[minmax(0,1fr)_15px]",
         className
       )}
     >
@@ -361,7 +432,8 @@ function WindowContentAreaImpl(
         }}
         data-window-content-area
         className={cn(
-          "min-h-0 min-w-0 overflow-y-auto overflow-x-hidden retro-hide-native-scrollbar focus-visible:outline-none",
+          "col-start-1 row-start-1 min-h-0 min-w-0 overflow-y-auto retro-hide-native-scrollbar focus-visible:outline-none",
+          horizontalScrollbar ? "overflow-x-auto" : "overflow-x-hidden",
           "bg-transparent",
           active && RETRO_CLASSES.focusRing,
           viewportClassName
@@ -372,7 +444,10 @@ function WindowContentAreaImpl(
       </div>
 
       <div
-        className="grid grid-rows-[15px_minmax(0,1fr)_15px] border-l border-[var(--retro-border-soft)]"
+        className={cn(
+          "col-start-2 row-start-1 grid grid-rows-[15px_minmax(0,1fr)_15px] border-l border-[var(--retro-border-soft)]",
+          horizontalScrollbar && "min-h-0"
+        )}
         role="group"
         aria-label="Vertical scrollbar"
       >
@@ -423,6 +498,68 @@ function WindowContentAreaImpl(
           <ScrollArrow direction="down" />
         </button>
       </div>
+
+      {horizontalScrollbar ? (
+        <>
+          <div
+            className="col-start-1 row-start-2 grid grid-cols-[15px_minmax(0,1fr)_15px] border-t border-[var(--retro-border-soft)]"
+            role="group"
+            aria-label="Horizontal scrollbar"
+          >
+            <button
+              type="button"
+              aria-label="Scroll left"
+              className="retro-scroll-btn grid h-[15px] w-[15px] place-items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--retro-focus)]"
+              onClick={() => scrollByAxis("x", -32)}
+            >
+              <ScrollArrow direction="left" />
+            </button>
+            <div
+              className="retro-scroll-track"
+              onPointerDown={(event) => {
+                if ((event.target as HTMLElement).closest("[data-scroll-thumb]")) return;
+                handleTrackPointerDown(
+                  "x",
+                  event.clientX,
+                  event.currentTarget.getBoundingClientRect().left
+                );
+              }}
+            >
+              <button
+                type="button"
+                data-scroll-thumb
+                aria-label="Horizontal scroll thumb"
+                className="retro-scroll-thumb bottom-0.5 top-0.5"
+                style={{
+                  left: 0,
+                  transform: `translateX(${Math.max(horizontal.thumbPos, 0)}px)`,
+                  width: Math.max(horizontal.thumbSize - 2, 0),
+                }}
+                onPointerDown={(event) =>
+                  beginThumbDrag("x", event.pointerId, event.clientX, event.currentTarget)
+                }
+                onPointerMove={handleThumbPointerMove}
+                onPointerUp={handleThumbPointerEnd}
+                onPointerCancel={handleThumbPointerEnd}
+                onKeyDown={(event) => handleThumbKeyDown("x", event)}
+              />
+            </div>
+            <button
+              type="button"
+              aria-label="Scroll right"
+              className="retro-scroll-btn grid h-[15px] w-[15px] place-items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--retro-focus)]"
+              onClick={() => scrollByAxis("x", 32)}
+            >
+              <ScrollArrow direction="right" />
+            </button>
+          </div>
+
+          <div
+            aria-hidden="true"
+            className="retro-scroll-corner col-start-2 row-start-2 border-l border-t border-[var(--retro-border-soft)]"
+          />
+        </>
+      ) : null}
     </div>
   );
 }
