@@ -88,7 +88,7 @@ export default function AboutDesktopPanel({
   return (
     <div
       data-about-panel
-      className="pointer-events-auto w-[min(96vw,1080px)] h-[min(80dvh,760px)] max-h-[calc(100dvh-6.5rem)] min-h-[360px]"
+      className="pointer-events-auto w-[min(96vw,1080px)] h-[min(80dvh,760px)] max-h-[calc(100dvh-7.5rem)] sm:max-h-[calc(100dvh-6.5rem)] min-h-[320px] sm:min-h-[360px]"
       onPointerDownCapture={() => onActivate?.()}
     >
       <div

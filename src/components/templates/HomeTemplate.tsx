@@ -55,6 +55,7 @@ export default function HomeTemplate() {
   const gridRef = useRef<HTMLDivElement>(null);
   const panSyncRafRef = useRef<number | null>(null);
   const latestCanvasOffsetRef = useRef({ x: 0, y: 0 });
+  const isDraggingCanvas = useRef(false);
 
   const [isTerminalOpen, setIsTerminalOpen] = useState(true);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
@@ -74,6 +75,7 @@ export default function HomeTemplate() {
   }, []);
 
   const scheduleCanvasOffsetSync = useCallback(() => {
+    if (isDraggingCanvas.current) return;
     if (panSyncRafRef.current !== null) return;
 
     panSyncRafRef.current = requestAnimationFrame(() => {
@@ -124,6 +126,7 @@ export default function HomeTemplate() {
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return;
     dragging.current = true;
+    isDraggingCanvas.current = true;
     lastPos.current = { x: e.clientX, y: e.clientY };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }, []);
@@ -139,6 +142,8 @@ export default function HomeTemplate() {
     };
     const onUp = () => {
       dragging.current = false;
+      isDraggingCanvas.current = false;
+      setCanvasOffset({ ...latestCanvasOffsetRef.current });
     };
 
     window.addEventListener("pointermove", onMove);
@@ -315,7 +320,7 @@ export default function HomeTemplate() {
 
   return (
     <LazyMotion features={domMax}>
-      <div className="relative h-[100dvh] w-screen overflow-hidden">
+      <div className="relative h-[100dvh] w-screen overflow-hidden" style={{ touchAction: "none" }}>
         <MacTopBar />
 
         <div
@@ -324,6 +329,7 @@ export default function HomeTemplate() {
           style={{
             backgroundImage: `linear-gradient(to right, ${CANVAS_GRID_LINE_COLOR} 1px, transparent 1px), linear-gradient(to bottom, ${CANVAS_GRID_LINE_COLOR} 1px, transparent 1px)`,
             backgroundSize: `${CANVAS_GRID_SIZE}px ${CANVAS_GRID_SIZE}px`,
+            willChange: "background-position",
           }}
         />
 
@@ -370,7 +376,7 @@ export default function HomeTemplate() {
 
         <div
           className={cn(
-            "absolute inset-x-0 top-6 bottom-16 sm:bottom-20 pointer-events-none flex items-center justify-center px-3 sm:px-5",
+            "absolute inset-x-0 top-6 bottom-16 sm:bottom-20 pointer-events-none flex items-start sm:items-center justify-center px-3 sm:px-5",
             activeWindow === "about" ? "z-[62]" : "z-[46]",
           )}
         >
@@ -410,7 +416,7 @@ export default function HomeTemplate() {
 
         <div
           className={cn(
-            "absolute inset-x-0 top-6 bottom-16 sm:bottom-20 pointer-events-none flex items-center justify-center px-3 sm:px-5",
+            "absolute inset-x-0 top-6 bottom-16 sm:bottom-20 pointer-events-none flex items-start sm:items-center justify-center px-3 sm:px-5",
             activeWindow === "resume" ? "z-[62]" : "z-[46]",
           )}
         >
@@ -448,7 +454,7 @@ export default function HomeTemplate() {
 
         <div
           className={cn(
-            "absolute inset-x-0 top-6 pointer-events-none flex items-end justify-center px-2 pt-2 sm:bottom-20 sm:items-center sm:px-4 sm:pt-0",
+            "absolute inset-x-0 top-6 pointer-events-none flex items-start justify-center px-2 pt-2 sm:bottom-20 sm:items-center sm:px-4 sm:pt-0",
             MOBILE_DOCK_CLEARANCE_CLASS,
             activeWindow === "terminal" ? "z-[62]" : "z-[46]",
           )}

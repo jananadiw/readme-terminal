@@ -198,7 +198,7 @@ export default function ResumeWindow({
   return (
     <div
       data-resume-window
-      className="pointer-events-auto h-[min(82dvh,760px)] max-h-[calc(100dvh-6.5rem)] min-h-[360px] w-[min(95vw,940px)]"
+      className="pointer-events-auto h-[min(82dvh,760px)] max-h-[calc(100dvh-7.5rem)] sm:max-h-[calc(100dvh-6.5rem)] min-h-[320px] sm:min-h-[360px] w-[min(95vw,940px)]"
       onPointerDownCapture={() => onActivate?.()}
     >
       <div
