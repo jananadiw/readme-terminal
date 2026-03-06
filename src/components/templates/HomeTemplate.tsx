@@ -41,6 +41,7 @@ const KEYBOARD_ZOOM_STEP = 0.1;
 const WHEEL_ZOOM_SENSITIVITY = 0.0018;
 const PINCH_WHEEL_ZOOM_SENSITIVITY = 0.006;
 const ZOOM_SPRING = { stiffness: 420, damping: 44, mass: 0.55 };
+const MOBILE_BREAKPOINT = 640;
 
 type DesktopWindowId = "terminal" | "about" | "resume" | "blog";
 
@@ -81,12 +82,12 @@ export default function HomeTemplate() {
     null,
   );
 
-  const [isTerminalOpen, setIsTerminalOpen] = useState(true);
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isResumeOpen, setIsResumeOpen] = useState(false);
   const [isBlogOpen, setIsBlogOpen] = useState(false);
   const [activeWindow, setActiveWindow] = useState<DesktopWindowId | null>(
-    "terminal",
+    null,
   );
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
@@ -95,6 +96,13 @@ export default function HomeTemplate() {
   const resumeDragControls = useDragControls();
   const blogDragControls = useDragControls();
   const terminalBoundsRef = useRef<HTMLDivElement>(null);
+  const hasInitializedWindowLayout = useRef(false);
+
+  const isMobileView =
+    viewportSize.width > 0 ? viewportSize.width < MOBILE_BREAKPOINT : false;
+  const isAnyWindowOpen =
+    isTerminalOpen || isAboutOpen || isResumeOpen || isBlogOpen;
+  const isCanvasInteractionLocked = isMobileView && isAnyWindowOpen;
 
   const updateGridPosition = useCallback((x: number, y: number) => {
     if (gridRef.current) {
@@ -180,8 +188,25 @@ export default function HomeTemplate() {
   }, []);
 
   useEffect(() => {
-    const updateViewport = () =>
+    const updateViewport = () => {
       setViewportSize({ width: window.innerWidth, height: window.innerHeight });
+      if (!hasInitializedWindowLayout.current) {
+        if (window.innerWidth < MOBILE_BREAKPOINT) {
+          setIsTerminalOpen(false);
+          setIsResumeOpen(false);
+          setIsBlogOpen(false);
+          setIsAboutOpen(true);
+          setActiveWindow("about");
+        } else {
+          setIsAboutOpen(false);
+          setIsResumeOpen(false);
+          setIsBlogOpen(false);
+          setIsTerminalOpen(true);
+          setActiveWindow("terminal");
+        }
+        hasInitializedWindowLayout.current = true;
+      }
+    };
 
     const initialX =
       window.innerWidth / 2 - CANVAS_CENTER.x * INITIAL_CANVAS_SCALE;
@@ -221,15 +246,17 @@ export default function HomeTemplate() {
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return;
+    if (isCanvasInteractionLocked) return;
     dragging.current = true;
     isDraggingCanvas.current = true;
     lastPos.current = { x: e.clientX, y: e.clientY };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  }, []);
+  }, [isCanvasInteractionLocked]);
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
       if (!dragging.current) return;
+      if (isCanvasInteractionLocked) return;
       const dx = e.clientX - lastPos.current.x;
       const dy = e.clientY - lastPos.current.y;
       lastPos.current = { x: e.clientX, y: e.clientY };
@@ -250,7 +277,7 @@ export default function HomeTemplate() {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
     };
-  }, [offsetX, offsetY]);
+  }, [isCanvasInteractionLocked, offsetX, offsetY]);
 
   // Pinch-to-zoom handlers
   useEffect(() => {
@@ -258,6 +285,7 @@ export default function HomeTemplate() {
       Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
 
     const onTouchStart = (e: TouchEvent) => {
+      if (isCanvasInteractionLocked) return;
       if (e.touches.length === 2) {
         pinchStartDist.current = getTouchDist(e.touches[0], e.touches[1]);
         pinchStartScale.current = canvasScaleRef.current;
@@ -265,6 +293,7 @@ export default function HomeTemplate() {
     };
 
     const onTouchMove = (e: TouchEvent) => {
+      if (isCanvasInteractionLocked) return;
       if (e.touches.length === 2 && pinchStartDist.current !== null) {
         const dist = getTouchDist(e.touches[0], e.touches[1]);
         const ratio = dist / pinchStartDist.current;
@@ -295,10 +324,14 @@ export default function HomeTemplate() {
       if (zoomIndicatorTimeout.current)
         clearTimeout(zoomIndicatorTimeout.current);
     };
-  }, [applyCanvasScale, flashZoomIndicator]);
+  }, [applyCanvasScale, flashZoomIndicator, isCanvasInteractionLocked]);
 
   const handleCanvasWheel = useCallback(
     (event: React.WheelEvent<HTMLDivElement>) => {
+      if (isCanvasInteractionLocked) {
+        return;
+      }
+
       if (event.ctrlKey) {
         return;
       }
@@ -317,11 +350,15 @@ export default function HomeTemplate() {
       });
       flashZoomIndicator();
     },
-    [applyCanvasScale, flashZoomIndicator],
+    [applyCanvasScale, flashZoomIndicator, isCanvasInteractionLocked],
   );
 
   useEffect(() => {
     const onCtrlWheel = (event: WheelEvent) => {
+      if (isCanvasInteractionLocked) {
+        return;
+      }
+
       if (!event.ctrlKey || !event.cancelable) {
         return;
       }
@@ -343,7 +380,7 @@ export default function HomeTemplate() {
     return () => {
       window.removeEventListener("wheel", onCtrlWheel);
     };
-  }, [applyCanvasScale, flashZoomIndicator]);
+  }, [applyCanvasScale, flashZoomIndicator, isCanvasInteractionLocked]);
 
   useEffect(() => {
     const preventGestureZoom = (event: Event) => {
@@ -381,6 +418,7 @@ export default function HomeTemplate() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (isEditableTarget(event.target)) return;
+      if (isCanvasInteractionLocked) return;
 
       if (event.key === "+" || event.key === "=") {
         event.preventDefault();
@@ -407,7 +445,14 @@ export default function HomeTemplate() {
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [applyCanvasScale, flashZoomIndicator]);
+  }, [applyCanvasScale, flashZoomIndicator, isCanvasInteractionLocked]);
+
+  useEffect(() => {
+    if (!isCanvasInteractionLocked) return;
+    dragging.current = false;
+    isDraggingCanvas.current = false;
+    pinchStartDist.current = null;
+  }, [isCanvasInteractionLocked]);
 
   const focusTerminalInput = useCallback(() => {
     requestAnimationFrame(() => inputRef.current?.focus());
@@ -453,25 +498,45 @@ export default function HomeTemplate() {
   }, [getFallbackActiveWindow]);
 
   const openTerminalWindow = useCallback(() => {
+    if (isMobileView) {
+      setIsAboutOpen(false);
+      setIsResumeOpen(false);
+      setIsBlogOpen(false);
+    }
     setIsTerminalOpen(true);
     setActiveWindow("terminal");
     focusTerminalInput();
-  }, [focusTerminalInput]);
+  }, [focusTerminalInput, isMobileView]);
 
   const openAboutWindow = useCallback(() => {
+    if (isMobileView) {
+      setIsTerminalOpen(false);
+      setIsResumeOpen(false);
+      setIsBlogOpen(false);
+    }
     setIsAboutOpen(true);
     setActiveWindow("about");
-  }, []);
+  }, [isMobileView]);
 
   const openResumeWindow = useCallback(() => {
+    if (isMobileView) {
+      setIsTerminalOpen(false);
+      setIsAboutOpen(false);
+      setIsBlogOpen(false);
+    }
     setIsResumeOpen(true);
     setActiveWindow("resume");
-  }, []);
+  }, [isMobileView]);
 
   const openBlogWindow = useCallback(() => {
+    if (isMobileView) {
+      setIsTerminalOpen(false);
+      setIsAboutOpen(false);
+      setIsResumeOpen(false);
+    }
     setIsBlogOpen(true);
     setActiveWindow("blog");
-  }, []);
+  }, [isMobileView]);
 
   const closeAllWindows = useCallback(() => {
     setIsTerminalOpen(false);
@@ -644,7 +709,12 @@ export default function HomeTemplate() {
         />
 
         <div
-          className="absolute inset-0 cursor-grab active:cursor-grabbing"
+          className={cn(
+            "absolute inset-0",
+            isCanvasInteractionLocked
+              ? "pointer-events-none cursor-default"
+              : "cursor-grab active:cursor-grabbing",
+          )}
           style={{ touchAction: "none" }}
           onPointerDown={onPointerDown}
           onWheel={handleCanvasWheel}
