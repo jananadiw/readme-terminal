@@ -28,12 +28,18 @@ export interface TerminalState {
 
 export type CommandResult = string | ReactNode | undefined;
 
-export type DesktopDockItemId = "about" | "terminal" | "resume";
+export type DesktopDockItemId =
+  | "about"
+  | "terminal"
+  | "resume"
+  | "play"
+  | "blog";
 
 export interface DesktopDockItem {
   id: DesktopDockItemId;
   label: string;
-  kind: "folder" | "terminal" | "resume";
+  kind: "folder" | "terminal" | "resume" | "play";
+  tooltip?: string;
 }
 
 export interface AboutPanelLink {

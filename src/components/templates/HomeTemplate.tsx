@@ -27,6 +27,7 @@ import MacTopBar from "@/components/organisms/MacTopBar";
 import MacFileDock from "@/components/organisms/MacFileDock";
 import AboutDesktopPanel from "@/components/organisms/AboutDesktopPanel";
 import ResumeWindow from "@/components/organisms/ResumeWindow";
+import BlogDesktopPanel from "@/components/organisms/BlogDesktopPanel";
 
 const STAMP_CULL_MARGIN = 260;
 const CANVAS_GRID_SIZE = 28;
@@ -41,7 +42,7 @@ const WHEEL_ZOOM_SENSITIVITY = 0.0018;
 const PINCH_WHEEL_ZOOM_SENSITIVITY = 0.006;
 const ZOOM_SPRING = { stiffness: 420, damping: 44, mass: 0.55 };
 
-type DesktopWindowId = "terminal" | "about" | "resume";
+type DesktopWindowId = "terminal" | "about" | "resume" | "blog";
 
 export default function HomeTemplate() {
   const { stampPositions } = useStampPositions();
@@ -83,6 +84,7 @@ export default function HomeTemplate() {
   const [isTerminalOpen, setIsTerminalOpen] = useState(true);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isResumeOpen, setIsResumeOpen] = useState(false);
+  const [isBlogOpen, setIsBlogOpen] = useState(false);
   const [activeWindow, setActiveWindow] = useState<DesktopWindowId | null>(
     "terminal",
   );
@@ -91,6 +93,7 @@ export default function HomeTemplate() {
   const dragControls = useDragControls();
   const aboutDragControls = useDragControls();
   const resumeDragControls = useDragControls();
+  const blogDragControls = useDragControls();
   const terminalBoundsRef = useRef<HTMLDivElement>(null);
 
   const updateGridPosition = useCallback((x: number, y: number) => {
@@ -415,9 +418,10 @@ export default function HomeTemplate() {
       if (closedWindow !== "terminal" && isTerminalOpen) return "terminal";
       if (closedWindow !== "resume" && isResumeOpen) return "resume";
       if (closedWindow !== "about" && isAboutOpen) return "about";
+      if (closedWindow !== "blog" && isBlogOpen) return "blog";
       return null;
     },
-    [isAboutOpen, isResumeOpen, isTerminalOpen],
+    [isAboutOpen, isBlogOpen, isResumeOpen, isTerminalOpen],
   );
 
   const closeTerminalWindow = useCallback(() => {
@@ -441,6 +445,13 @@ export default function HomeTemplate() {
     );
   }, [getFallbackActiveWindow]);
 
+  const closeBlogWindow = useCallback(() => {
+    setIsBlogOpen(false);
+    setActiveWindow((current) =>
+      current === "blog" ? getFallbackActiveWindow("blog") : current,
+    );
+  }, [getFallbackActiveWindow]);
+
   const openTerminalWindow = useCallback(() => {
     setIsTerminalOpen(true);
     setActiveWindow("terminal");
@@ -457,43 +468,69 @@ export default function HomeTemplate() {
     setActiveWindow("resume");
   }, []);
 
+  const openBlogWindow = useCallback(() => {
+    setIsBlogOpen(true);
+    setActiveWindow("blog");
+  }, []);
+
+  const closeAllWindows = useCallback(() => {
+    setIsTerminalOpen(false);
+    setIsAboutOpen(false);
+    setIsResumeOpen(false);
+    setIsBlogOpen(false);
+    setActiveWindow(null);
+  }, []);
+
   const handleDockItemClick = useCallback(
     (id: DesktopDockItemId) => {
-      if (id === "about") {
-        if (isAboutOpen) {
-          closeAboutWindow();
+      switch (id) {
+        case "about":
+          if (isAboutOpen) {
+            closeAboutWindow();
+            return;
+          }
+          openAboutWindow();
           return;
-        }
-
-        openAboutWindow();
-        return;
-      }
-
-      if (id === "terminal") {
-        if (isTerminalOpen) {
-          closeTerminalWindow();
+        case "terminal":
+          if (isTerminalOpen) {
+            closeTerminalWindow();
+            return;
+          }
+          openTerminalWindow();
           return;
-        }
-
-        openTerminalWindow();
-        return;
+        case "resume":
+          if (isResumeOpen) {
+            closeResumeWindow();
+            return;
+          }
+          openResumeWindow();
+          return;
+        case "blog":
+          if (isBlogOpen) {
+            closeBlogWindow();
+            return;
+          }
+          openBlogWindow();
+          return;
+        case "play":
+          closeAllWindows();
+          return;
+        default:
+          return;
       }
-
-      if (isResumeOpen) {
-        closeResumeWindow();
-        return;
-      }
-
-      openResumeWindow();
     },
     [
       closeAboutWindow,
+      closeAllWindows,
+      closeBlogWindow,
       closeResumeWindow,
       closeTerminalWindow,
       isAboutOpen,
+      isBlogOpen,
       isResumeOpen,
       isTerminalOpen,
       openAboutWindow,
+      openBlogWindow,
       openResumeWindow,
       openTerminalWindow,
     ],
@@ -504,12 +541,23 @@ export default function HomeTemplate() {
   }, [openResumeWindow]);
 
   useEffect(() => {
-    if (activeWindow !== "about" && activeWindow !== "resume") return;
+    if (
+      activeWindow !== "about" &&
+      activeWindow !== "resume" &&
+      activeWindow !== "blog"
+    ) {
+      return;
+    }
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         if (activeWindow === "about") {
           closeAboutWindow();
+          return;
+        }
+
+        if (activeWindow === "blog") {
+          closeBlogWindow();
           return;
         }
 
@@ -521,7 +569,7 @@ export default function HomeTemplate() {
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [activeWindow, closeAboutWindow, closeResumeWindow]);
+  }, [activeWindow, closeAboutWindow, closeBlogWindow, closeResumeWindow]);
 
   const activeDockIds = useMemo(() => {
     const activeIds: DesktopDockItemId[] = [];
@@ -534,8 +582,14 @@ export default function HomeTemplate() {
     if (isTerminalOpen) {
       activeIds.push("terminal");
     }
+    if (isBlogOpen) {
+      activeIds.push("blog");
+    }
+    if (!isAboutOpen && !isResumeOpen && !isTerminalOpen && !isBlogOpen) {
+      activeIds.push("play");
+    }
     return activeIds;
-  }, [isAboutOpen, isResumeOpen, isTerminalOpen]);
+  }, [isAboutOpen, isBlogOpen, isResumeOpen, isTerminalOpen]);
 
   const noMotion = prefersReducedMotion ?? false;
   const visibleStamps = useMemo(() => {
@@ -714,6 +768,44 @@ export default function HomeTemplate() {
                     resumeDragControls.start(event);
                   }}
                   onClose={closeResumeWindow}
+                />
+              </m.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div
+          className={cn(
+            "absolute inset-x-0 top-6 bottom-16 sm:bottom-20 pointer-events-none flex items-start sm:items-center justify-center px-3 sm:px-5",
+            activeWindow === "blog" ? "z-[62]" : "z-[46]",
+          )}
+        >
+          <AnimatePresence>
+            {isBlogOpen && (
+              <m.div
+                key="blog-panel"
+                drag
+                dragControls={blogDragControls}
+                dragListener={false}
+                dragMomentum={false}
+                dragElastic={0}
+                dragConstraints={terminalBoundsRef}
+                initial={noMotion ? false : { opacity: 0, y: 12, scale: 0.99 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.99 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                className="pointer-events-auto"
+                style={{ willChange: "transform, opacity" }}
+              >
+                <BlogDesktopPanel
+                  active={activeWindow === "blog"}
+                  onActivate={() => setActiveWindow("blog")}
+                  onTitleBarPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    blogDragControls.start(event);
+                  }}
+                  onClose={closeBlogWindow}
                 />
               </m.div>
             )}

@@ -19,6 +19,14 @@ const DOCK_ICON_ASSETS: Record<
     closedSrc: "/icons/aboutClose.png",
     openSrc: "/icons/aboutOpen.png",
   },
+  play: {
+    closedSrc: "/icons/aboutClose.png",
+    openSrc: "/icons/aboutOpen.png",
+  },
+  blog: {
+    closedSrc: "/icons/aboutClose.png",
+    openSrc: "/icons/aboutOpen.png",
+  },
   terminal: {
     closedSrc: "/icons/terminalClose.png",
     openSrc: "/icons/terminalOpen.png",
@@ -79,6 +87,7 @@ export default function MacFileDock({
                 type="button"
                 aria-label={item.label}
                 aria-pressed={active}
+                title={item.tooltip}
                 className={cn(
                   RETRO_CLASSES.dockItemBase,
                   RETRO_CLASSES.focusRing,

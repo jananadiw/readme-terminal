@@ -96,6 +96,13 @@ export const STAMP_TOOLTIPS: Record<string, string> = {
 
 export const DESKTOP_DOCK_ITEMS: DesktopDockItem[] = [
   { id: "about", label: "About", kind: "folder" },
+  {
+    id: "play",
+    label: "Play",
+    kind: "play",
+    tooltip: "Drag and explore canvas",
+  },
+  { id: "blog", label: "Blog", kind: "folder" },
   { id: "terminal", label: "Terminal", kind: "terminal" },
   { id: "resume", label: "Resume", kind: "resume" },
 ];
