@@ -38,7 +38,7 @@ export default function TerminalInput({
 
   return (
     <div
-      className={`flex items-center gap-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 font-[Inconsolata] text-[15px] text-[var(--retro-accent-blue-text)] ${RETRO_CLASSES.toolbarRow}`}
+      className={`flex items-center gap-1.5 px-2 py-1.5 sm:px-4 sm:py-2.5 font-[Inconsolata] text-base sm:text-[15px] text-[var(--retro-accent-blue-text)] ${RETRO_CLASSES.toolbarRow}`}
     >
       <TerminalPrompt />
       <div
@@ -65,7 +65,7 @@ export default function TerminalInput({
           autoFocus
           onFocus={handleFocus}
           onBlur={handleBlur}
-          className={`h-6 border-0 px-1 py-0 text-[15px] text-[var(--retro-accent-blue-text)] placeholder-[var(--retro-text-muted)] caret-[var(--retro-accent-blue)] focus:placeholder-transparent ${
+          className={`h-6 border-0 px-1 py-0 text-base sm:text-[15px] text-[var(--retro-accent-blue-text)] placeholder-[var(--retro-text-muted)] caret-[var(--retro-accent-blue)] focus:placeholder-transparent ${
             showRetroCursor ? "caret-transparent" : ""
           }`}
         />

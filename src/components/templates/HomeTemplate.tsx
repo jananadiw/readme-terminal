@@ -7,6 +7,7 @@ import {
   m,
   useMotionValue,
   useMotionValueEvent,
+  useSpring,
   AnimatePresence,
   useDragControls,
   useReducedMotion,
@@ -30,7 +31,15 @@ import ResumeWindow from "@/components/organisms/ResumeWindow";
 const STAMP_CULL_MARGIN = 260;
 const CANVAS_GRID_SIZE = 28;
 const CANVAS_GRID_LINE_COLOR = "#d9dcef";
-const MOBILE_DOCK_CLEARANCE_CLASS = "bottom-[calc(env(safe-area-inset-bottom)+5rem)]";
+const MOBILE_DOCK_CLEARANCE_CLASS =
+  "bottom-[calc(env(safe-area-inset-bottom)+5rem)]";
+const INITIAL_CANVAS_SCALE = 0.9;
+const MIN_CANVAS_SCALE = 0.45;
+const MAX_CANVAS_SCALE = 1;
+const KEYBOARD_ZOOM_STEP = 0.1;
+const WHEEL_ZOOM_SENSITIVITY = 0.0018;
+const PINCH_WHEEL_ZOOM_SENSITIVITY = 0.006;
+const ZOOM_SPRING = { stiffness: 420, damping: 44, mass: 0.55 };
 
 type DesktopWindowId = "terminal" | "about" | "resume";
 
@@ -50,17 +59,33 @@ export default function HomeTemplate() {
 
   const offsetX = useMotionValue(0);
   const offsetY = useMotionValue(0);
+  const smoothOffsetX = useSpring(offsetX, ZOOM_SPRING);
+  const smoothOffsetY = useSpring(offsetY, ZOOM_SPRING);
   const dragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
   const gridRef = useRef<HTMLDivElement>(null);
   const panSyncRafRef = useRef<number | null>(null);
   const latestCanvasOffsetRef = useRef({ x: 0, y: 0 });
   const isDraggingCanvas = useRef(false);
+  const smoothScaleRef = useRef(INITIAL_CANVAS_SCALE);
+
+  // Pinch-to-zoom state
+  const [canvasScale, setCanvasScale] = useState(INITIAL_CANVAS_SCALE);
+  const canvasScaleRef = useRef(INITIAL_CANVAS_SCALE);
+  const smoothScale = useSpring(INITIAL_CANVAS_SCALE, ZOOM_SPRING);
+  const pinchStartDist = useRef<number | null>(null);
+  const pinchStartScale = useRef(1);
+  const [showZoomIndicator, setShowZoomIndicator] = useState(false);
+  const zoomIndicatorTimeout = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const [isTerminalOpen, setIsTerminalOpen] = useState(true);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isResumeOpen, setIsResumeOpen] = useState(false);
-  const [activeWindow, setActiveWindow] = useState<DesktopWindowId | null>("terminal");
+  const [activeWindow, setActiveWindow] = useState<DesktopWindowId | null>(
+    "terminal",
+  );
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
   const dragControls = useDragControls();
@@ -70,7 +95,10 @@ export default function HomeTemplate() {
 
   const updateGridPosition = useCallback((x: number, y: number) => {
     if (gridRef.current) {
-      gridRef.current.style.backgroundPosition = `${((x % CANVAS_GRID_SIZE) + CANVAS_GRID_SIZE) % CANVAS_GRID_SIZE}px ${((y % CANVAS_GRID_SIZE) + CANVAS_GRID_SIZE) % CANVAS_GRID_SIZE}px`;
+      const s = smoothScaleRef.current;
+      const scaledSize = CANVAS_GRID_SIZE * s;
+      gridRef.current.style.backgroundPosition = `${((x % scaledSize) + scaledSize) % scaledSize}px ${((y % scaledSize) + scaledSize) % scaledSize}px`;
+      gridRef.current.style.backgroundSize = `${scaledSize}px ${scaledSize}px`;
     }
   }, []);
 
@@ -93,14 +121,74 @@ export default function HomeTemplate() {
     [scheduleCanvasOffsetSync, updateGridPosition],
   );
 
+  const applyCanvasScale = useCallback(
+    (nextScale: number, anchor?: { x: number; y: number }) => {
+      const clampedScale = Math.min(
+        MAX_CANVAS_SCALE,
+        Math.max(MIN_CANVAS_SCALE, nextScale),
+      );
+      const previousScale = canvasScaleRef.current;
+
+      if (
+        !Number.isFinite(clampedScale) ||
+        Math.abs(clampedScale - previousScale) < 0.001
+      ) {
+        return;
+      }
+
+      const fallbackAnchor =
+        viewportSize.width > 0 && viewportSize.height > 0
+          ? { x: viewportSize.width / 2, y: viewportSize.height / 2 }
+          : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      const zoomAnchor = anchor ?? fallbackAnchor;
+
+      const currentX = offsetX.get();
+      const currentY = offsetY.get();
+      const anchorWorldX = (zoomAnchor.x - currentX) / previousScale;
+      const anchorWorldY = (zoomAnchor.y - currentY) / previousScale;
+
+      const nextX = zoomAnchor.x - anchorWorldX * clampedScale;
+      const nextY = zoomAnchor.y - anchorWorldY * clampedScale;
+
+      canvasScaleRef.current = clampedScale;
+      setCanvasScale(clampedScale);
+      smoothScale.set(clampedScale);
+      offsetX.set(nextX);
+      offsetY.set(nextY);
+    },
+    [
+      offsetX,
+      offsetY,
+      smoothScale,
+      viewportSize.height,
+      viewportSize.width,
+    ],
+  );
+
+  const flashZoomIndicator = useCallback(() => {
+    setShowZoomIndicator(true);
+    if (zoomIndicatorTimeout.current) {
+      clearTimeout(zoomIndicatorTimeout.current);
+    }
+    zoomIndicatorTimeout.current = setTimeout(
+      () => setShowZoomIndicator(false),
+      800,
+    );
+  }, []);
+
   useEffect(() => {
     const updateViewport = () =>
       setViewportSize({ width: window.innerWidth, height: window.innerHeight });
 
-    const initialX = window.innerWidth / 2 - CANVAS_CENTER.x;
-    const initialY = window.innerHeight / 2 - CANVAS_CENTER.y;
+    const initialX =
+      window.innerWidth / 2 - CANVAS_CENTER.x * INITIAL_CANVAS_SCALE;
+    const initialY =
+      window.innerHeight / 2 - CANVAS_CENTER.y * INITIAL_CANVAS_SCALE;
 
     updateViewport();
+    canvasScaleRef.current = INITIAL_CANVAS_SCALE;
+    smoothScaleRef.current = INITIAL_CANVAS_SCALE;
+    smoothScale.set(INITIAL_CANVAS_SCALE);
     offsetX.set(initialX);
     offsetY.set(initialY);
     syncCanvasState(initialX, initialY);
@@ -113,14 +201,19 @@ export default function HomeTemplate() {
       }
       window.removeEventListener("resize", updateViewport);
     };
-  }, [offsetX, offsetY, syncCanvasState]);
+  }, [offsetX, offsetY, smoothScale, syncCanvasState]);
 
-  useMotionValueEvent(offsetX, "change", (x) => {
-    syncCanvasState(x, offsetY.get());
+  useMotionValueEvent(smoothOffsetX, "change", (x) => {
+    syncCanvasState(x, smoothOffsetY.get());
   });
 
-  useMotionValueEvent(offsetY, "change", (y) => {
-    syncCanvasState(offsetX.get(), y);
+  useMotionValueEvent(smoothOffsetY, "change", (y) => {
+    syncCanvasState(smoothOffsetX.get(), y);
+  });
+
+  useMotionValueEvent(smoothScale, "change", (nextScale) => {
+    smoothScaleRef.current = nextScale;
+    updateGridPosition(smoothOffsetX.get(), smoothOffsetY.get());
   });
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
@@ -155,6 +248,163 @@ export default function HomeTemplate() {
       window.removeEventListener("pointercancel", onUp);
     };
   }, [offsetX, offsetY]);
+
+  // Pinch-to-zoom handlers
+  useEffect(() => {
+    const getTouchDist = (t1: Touch, t2: Touch) =>
+      Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        pinchStartDist.current = getTouchDist(e.touches[0], e.touches[1]);
+        pinchStartScale.current = canvasScaleRef.current;
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && pinchStartDist.current !== null) {
+        const dist = getTouchDist(e.touches[0], e.touches[1]);
+        const ratio = dist / pinchStartDist.current;
+        const anchorX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const anchorY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        applyCanvasScale(pinchStartScale.current * ratio, {
+          x: anchorX,
+          y: anchorY,
+        });
+        flashZoomIndicator();
+      }
+    };
+
+    const onTouchEnd = () => {
+      pinchStartDist.current = null;
+    };
+
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+    window.addEventListener("touchcancel", onTouchEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("touchcancel", onTouchEnd);
+      if (zoomIndicatorTimeout.current)
+        clearTimeout(zoomIndicatorTimeout.current);
+    };
+  }, [applyCanvasScale, flashZoomIndicator]);
+
+  const handleCanvasWheel = useCallback(
+    (event: React.WheelEvent<HTMLDivElement>) => {
+      if (event.ctrlKey) {
+        return;
+      }
+
+      const sensitivity = WHEEL_ZOOM_SENSITIVITY;
+      const zoomFactor = Math.exp(-event.deltaY * sensitivity);
+
+      if (!Number.isFinite(zoomFactor) || Math.abs(zoomFactor - 1) < 0.0001) {
+        return;
+      }
+
+      event.preventDefault();
+      applyCanvasScale(canvasScaleRef.current * zoomFactor, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+      flashZoomIndicator();
+    },
+    [applyCanvasScale, flashZoomIndicator],
+  );
+
+  useEffect(() => {
+    const onCtrlWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey || !event.cancelable) {
+        return;
+      }
+
+      const zoomFactor = Math.exp(-event.deltaY * PINCH_WHEEL_ZOOM_SENSITIVITY);
+      if (!Number.isFinite(zoomFactor) || Math.abs(zoomFactor - 1) < 0.0001) {
+        return;
+      }
+
+      event.preventDefault();
+      applyCanvasScale(canvasScaleRef.current * zoomFactor, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+      flashZoomIndicator();
+    };
+
+    window.addEventListener("wheel", onCtrlWheel, { passive: false });
+    return () => {
+      window.removeEventListener("wheel", onCtrlWheel);
+    };
+  }, [applyCanvasScale, flashZoomIndicator]);
+
+  useEffect(() => {
+    const preventGestureZoom = (event: Event) => {
+      if (event.cancelable) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener("gesturestart", preventGestureZoom, {
+      passive: false,
+    });
+    window.addEventListener("gesturechange", preventGestureZoom, {
+      passive: false,
+    });
+
+    return () => {
+      window.removeEventListener("gesturestart", preventGestureZoom);
+      window.removeEventListener("gesturechange", preventGestureZoom);
+    };
+  }, []);
+
+  useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null) => {
+      const element = target as HTMLElement | null;
+      if (!element) return false;
+      const tag = element.tagName;
+      return (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        element.isContentEditable
+      );
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (isEditableTarget(event.target)) return;
+
+      if (event.key === "+" || event.key === "=") {
+        event.preventDefault();
+        applyCanvasScale(canvasScaleRef.current * (1 + KEYBOARD_ZOOM_STEP));
+        flashZoomIndicator();
+        return;
+      }
+
+      if (event.key === "-" || event.key === "_") {
+        event.preventDefault();
+        applyCanvasScale(canvasScaleRef.current * (1 - KEYBOARD_ZOOM_STEP));
+        flashZoomIndicator();
+        return;
+      }
+
+      if (event.key === "0") {
+        event.preventDefault();
+        applyCanvasScale(INITIAL_CANVAS_SCALE);
+        flashZoomIndicator();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [applyCanvasScale, flashZoomIndicator]);
 
   const focusTerminalInput = useCallback(() => {
     requestAnimationFrame(() => inputRef.current?.focus());
@@ -295,10 +545,12 @@ export default function HomeTemplate() {
       return [];
     }
 
-    const left = -canvasOffset.x - STAMP_CULL_MARGIN;
-    const top = -canvasOffset.y - STAMP_CULL_MARGIN;
-    const right = -canvasOffset.x + viewportSize.width + STAMP_CULL_MARGIN;
-    const bottom = -canvasOffset.y + viewportSize.height + STAMP_CULL_MARGIN;
+    const left = (-canvasOffset.x - STAMP_CULL_MARGIN) / canvasScale;
+    const top = (-canvasOffset.y - STAMP_CULL_MARGIN) / canvasScale;
+    const right =
+      (-canvasOffset.x + viewportSize.width + STAMP_CULL_MARGIN) / canvasScale;
+    const bottom =
+      (-canvasOffset.y + viewportSize.height + STAMP_CULL_MARGIN) / canvasScale;
 
     return stampPositions.stamps
       .map((stamp, index) => ({ stamp, index }))
@@ -316,11 +568,15 @@ export default function HomeTemplate() {
     viewportSize.height,
     canvasOffset.x,
     canvasOffset.y,
+    canvasScale,
   ]);
 
   return (
     <LazyMotion features={domMax}>
-      <div className="relative h-[100dvh] w-screen overflow-hidden" style={{ touchAction: "none" }}>
+      <div
+        className="relative h-[100dvh] w-screen overflow-hidden"
+        style={{ touchAction: "none" }}
+      >
         <MacTopBar />
 
         <div
@@ -328,7 +584,7 @@ export default function HomeTemplate() {
           className="absolute inset-0"
           style={{
             backgroundImage: `linear-gradient(to right, ${CANVAS_GRID_LINE_COLOR} 1px, transparent 1px), linear-gradient(to bottom, ${CANVAS_GRID_LINE_COLOR} 1px, transparent 1px)`,
-            backgroundSize: `${CANVAS_GRID_SIZE}px ${CANVAS_GRID_SIZE}px`,
+            backgroundSize: `${CANVAS_GRID_SIZE * INITIAL_CANVAS_SCALE}px ${CANVAS_GRID_SIZE * INITIAL_CANVAS_SCALE}px`,
             willChange: "background-position",
           }}
         />
@@ -337,14 +593,17 @@ export default function HomeTemplate() {
           className="absolute inset-0 cursor-grab active:cursor-grabbing"
           style={{ touchAction: "none" }}
           onPointerDown={onPointerDown}
+          onWheel={handleCanvasWheel}
           aria-hidden="true"
         />
 
         <m.div
           className="absolute inset-0 pointer-events-none"
           style={{
-            x: offsetX,
-            y: offsetY,
+            x: smoothOffsetX,
+            y: smoothOffsetY,
+            scale: smoothScale,
+            transformOrigin: "0 0",
             willChange: "transform",
           }}
         >
@@ -368,11 +627,20 @@ export default function HomeTemplate() {
         <div
           ref={terminalBoundsRef}
           className={cn(
-            "pointer-events-none absolute inset-x-2 top-8 sm:inset-x-4 sm:top-9 sm:bottom-24",
+            "pointer-events-none absolute inset-x-0 top-8 sm:inset-x-4 sm:top-9 sm:bottom-24",
             MOBILE_DOCK_CLEARANCE_CLASS,
           )}
           aria-hidden="true"
         />
+
+        {/* Zoom indicator */}
+        {showZoomIndicator && (
+          <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] pointer-events-none">
+            <div className="rounded-full bg-[var(--retro-surface)] border border-[var(--retro-border)] px-3 py-1 font-[Inconsolata] text-xs text-[var(--retro-accent-blue-text)] shadow-md opacity-90">
+              {Math.round(canvasScale * 100)}%
+            </div>
+          </div>
+        )}
 
         <div
           className={cn(
@@ -454,7 +722,7 @@ export default function HomeTemplate() {
 
         <div
           className={cn(
-            "absolute inset-x-0 top-6 pointer-events-none flex items-start justify-center px-2 pt-2 sm:bottom-20 sm:items-center sm:px-4 sm:pt-0",
+            "absolute inset-x-0 top-6 pointer-events-none flex items-start justify-center px-0 pt-0 sm:px-4 sm:pt-0 sm:items-center sm:bottom-20",
             MOBILE_DOCK_CLEARANCE_CLASS,
             activeWindow === "terminal" ? "z-[62]" : "z-[46]",
           )}
@@ -478,7 +746,7 @@ export default function HomeTemplate() {
                   damping: 28,
                   mass: 0.8,
                 }}
-                className="pointer-events-auto"
+                className="pointer-events-auto w-full sm:w-auto"
                 style={{ willChange: "transform, opacity" }}
                 data-terminal
               >
