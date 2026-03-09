@@ -20,7 +20,7 @@ import {
   STAMP_TOOLTIPS,
 } from "@/lib/constants";
 import { cn } from "@/lib/classNames";
-import type { DesktopDockItemId } from "@/lib/types";
+import type { BlogPreviewArticle, DesktopDockItemId } from "@/lib/types";
 import DraggableStamp from "@/components/organisms/DraggableStamp";
 import TerminalWindow from "@/components/organisms/TerminalWindow";
 import MacTopBar from "@/components/organisms/MacTopBar";
@@ -28,6 +28,7 @@ import MacFileDock from "@/components/organisms/MacFileDock";
 import AboutDesktopPanel from "@/components/organisms/AboutDesktopPanel";
 import ResumeWindow from "@/components/organisms/ResumeWindow";
 import BlogDesktopPanel from "@/components/organisms/BlogDesktopPanel";
+import BlogArticleWindow from "@/components/organisms/BlogArticleWindow";
 
 const STAMP_CULL_MARGIN = 260;
 const CANVAS_GRID_SIZE = 28;
@@ -43,9 +44,13 @@ const PINCH_WHEEL_ZOOM_SENSITIVITY = 0.006;
 const ZOOM_SPRING = { stiffness: 420, damping: 44, mass: 0.55 };
 const MOBILE_BREAKPOINT = 640;
 
-type DesktopWindowId = "terminal" | "about" | "resume" | "blog";
+type DesktopWindowId = "terminal" | "about" | "resume" | "blog" | "article";
 
-export default function HomeTemplate() {
+interface HomeTemplateProps {
+  blogArticles: BlogPreviewArticle[];
+}
+
+export default function HomeTemplate({ blogArticles }: HomeTemplateProps) {
   const { stampPositions } = useStampPositions();
   const {
     history,
@@ -86,6 +91,9 @@ export default function HomeTemplate() {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isResumeOpen, setIsResumeOpen] = useState(false);
   const [isBlogOpen, setIsBlogOpen] = useState(false);
+  const [isBlogArticleOpen, setIsBlogArticleOpen] = useState(false);
+  const [activeBlogArticle, setActiveBlogArticle] =
+    useState<BlogPreviewArticle | null>(null);
   const [activeWindow, setActiveWindow] = useState<DesktopWindowId | null>(
     null,
   );
@@ -95,13 +103,18 @@ export default function HomeTemplate() {
   const aboutDragControls = useDragControls();
   const resumeDragControls = useDragControls();
   const blogDragControls = useDragControls();
+  const articleDragControls = useDragControls();
   const terminalBoundsRef = useRef<HTMLDivElement>(null);
   const hasInitializedWindowLayout = useRef(false);
 
   const isMobileView =
     viewportSize.width > 0 ? viewportSize.width < MOBILE_BREAKPOINT : false;
   const isAnyWindowOpen =
-    isTerminalOpen || isAboutOpen || isResumeOpen || isBlogOpen;
+    isTerminalOpen ||
+    isAboutOpen ||
+    isResumeOpen ||
+    isBlogOpen ||
+    isBlogArticleOpen;
   const isCanvasInteractionLocked = isMobileView && isAnyWindowOpen;
 
   const updateGridPosition = useCallback((x: number, y: number) => {
@@ -195,12 +208,16 @@ export default function HomeTemplate() {
           setIsTerminalOpen(false);
           setIsResumeOpen(false);
           setIsBlogOpen(false);
+          setIsBlogArticleOpen(false);
+          setActiveBlogArticle(null);
           setIsAboutOpen(true);
           setActiveWindow("about");
         } else {
           setIsAboutOpen(false);
           setIsResumeOpen(false);
           setIsBlogOpen(false);
+          setIsBlogArticleOpen(false);
+          setActiveBlogArticle(null);
           setIsTerminalOpen(true);
           setActiveWindow("terminal");
         }
@@ -460,13 +477,14 @@ export default function HomeTemplate() {
 
   const getFallbackActiveWindow = useCallback(
     (closedWindow: DesktopWindowId) => {
+      if (closedWindow !== "article" && isBlogArticleOpen) return "article";
       if (closedWindow !== "terminal" && isTerminalOpen) return "terminal";
       if (closedWindow !== "resume" && isResumeOpen) return "resume";
       if (closedWindow !== "about" && isAboutOpen) return "about";
       if (closedWindow !== "blog" && isBlogOpen) return "blog";
       return null;
     },
-    [isAboutOpen, isBlogOpen, isResumeOpen, isTerminalOpen],
+    [isAboutOpen, isBlogArticleOpen, isBlogOpen, isResumeOpen, isTerminalOpen],
   );
 
   const closeTerminalWindow = useCallback(() => {
@@ -497,11 +515,21 @@ export default function HomeTemplate() {
     );
   }, [getFallbackActiveWindow]);
 
+  const closeBlogArticleWindow = useCallback(() => {
+    setIsBlogArticleOpen(false);
+    setActiveBlogArticle(null);
+    setActiveWindow((current) =>
+      current === "article" ? getFallbackActiveWindow("article") : current,
+    );
+  }, [getFallbackActiveWindow]);
+
   const openTerminalWindow = useCallback(() => {
     if (isMobileView) {
       setIsAboutOpen(false);
       setIsResumeOpen(false);
       setIsBlogOpen(false);
+      setIsBlogArticleOpen(false);
+      setActiveBlogArticle(null);
     }
     setIsTerminalOpen(true);
     setActiveWindow("terminal");
@@ -513,6 +541,8 @@ export default function HomeTemplate() {
       setIsTerminalOpen(false);
       setIsResumeOpen(false);
       setIsBlogOpen(false);
+      setIsBlogArticleOpen(false);
+      setActiveBlogArticle(null);
     }
     setIsAboutOpen(true);
     setActiveWindow("about");
@@ -523,6 +553,8 @@ export default function HomeTemplate() {
       setIsTerminalOpen(false);
       setIsAboutOpen(false);
       setIsBlogOpen(false);
+      setIsBlogArticleOpen(false);
+      setActiveBlogArticle(null);
     }
     setIsResumeOpen(true);
     setActiveWindow("resume");
@@ -533,16 +565,38 @@ export default function HomeTemplate() {
       setIsTerminalOpen(false);
       setIsAboutOpen(false);
       setIsResumeOpen(false);
+      setIsBlogArticleOpen(false);
+      setActiveBlogArticle(null);
     }
     setIsBlogOpen(true);
     setActiveWindow("blog");
   }, [isMobileView]);
+
+  const openBlogArticleWindow = useCallback(
+    (article: BlogPreviewArticle) => {
+      if (!article.mdxContent) return;
+
+      if (isMobileView) {
+        setIsTerminalOpen(false);
+        setIsAboutOpen(false);
+        setIsResumeOpen(false);
+        setIsBlogOpen(false);
+      }
+
+      setActiveBlogArticle(article);
+      setIsBlogArticleOpen(true);
+      setActiveWindow("article");
+    },
+    [isMobileView],
+  );
 
   const closeAllWindows = useCallback(() => {
     setIsTerminalOpen(false);
     setIsAboutOpen(false);
     setIsResumeOpen(false);
     setIsBlogOpen(false);
+    setIsBlogArticleOpen(false);
+    setActiveBlogArticle(null);
     setActiveWindow(null);
   }, []);
 
@@ -609,7 +663,8 @@ export default function HomeTemplate() {
     if (
       activeWindow !== "about" &&
       activeWindow !== "resume" &&
-      activeWindow !== "blog"
+      activeWindow !== "blog" &&
+      activeWindow !== "article"
     ) {
       return;
     }
@@ -626,6 +681,11 @@ export default function HomeTemplate() {
           return;
         }
 
+        if (activeWindow === "article") {
+          closeBlogArticleWindow();
+          return;
+        }
+
         closeResumeWindow();
       }
     };
@@ -634,7 +694,13 @@ export default function HomeTemplate() {
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [activeWindow, closeAboutWindow, closeBlogWindow, closeResumeWindow]);
+  }, [
+    activeWindow,
+    closeAboutWindow,
+    closeBlogArticleWindow,
+    closeBlogWindow,
+    closeResumeWindow,
+  ]);
 
   const activeDockIds = useMemo(() => {
     const activeIds: DesktopDockItemId[] = [];
@@ -647,14 +713,20 @@ export default function HomeTemplate() {
     if (isTerminalOpen) {
       activeIds.push("terminal");
     }
-    if (isBlogOpen) {
+    if (isBlogOpen || isBlogArticleOpen) {
       activeIds.push("blog");
     }
-    if (!isAboutOpen && !isResumeOpen && !isTerminalOpen && !isBlogOpen) {
+    if (
+      !isAboutOpen &&
+      !isResumeOpen &&
+      !isTerminalOpen &&
+      !isBlogOpen &&
+      !isBlogArticleOpen
+    ) {
       activeIds.push("play");
     }
     return activeIds;
-  }, [isAboutOpen, isBlogOpen, isResumeOpen, isTerminalOpen]);
+  }, [isAboutOpen, isBlogArticleOpen, isBlogOpen, isResumeOpen, isTerminalOpen]);
 
   const noMotion = prefersReducedMotion ?? false;
   const visibleStamps = useMemo(() => {
@@ -868,8 +940,10 @@ export default function HomeTemplate() {
                 style={{ willChange: "transform, opacity" }}
               >
                 <BlogDesktopPanel
+                  articles={blogArticles}
                   active={activeWindow === "blog"}
                   onActivate={() => setActiveWindow("blog")}
+                  onOpenArticle={openBlogArticleWindow}
                   onTitleBarPointerDown={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -879,6 +953,45 @@ export default function HomeTemplate() {
                 />
               </m.div>
             )}
+          </AnimatePresence>
+        </div>
+
+        <div
+          className={cn(
+            "absolute inset-x-0 top-6 bottom-16 sm:bottom-20 pointer-events-none flex items-start sm:items-center justify-center px-3 sm:px-5",
+            activeWindow === "article" ? "z-[63]" : "z-[47]",
+          )}
+        >
+          <AnimatePresence>
+            {isBlogArticleOpen && activeBlogArticle ? (
+              <m.div
+                key={`article-panel-${activeBlogArticle.id}`}
+                drag
+                dragControls={articleDragControls}
+                dragListener={false}
+                dragMomentum={false}
+                dragElastic={0}
+                dragConstraints={terminalBoundsRef}
+                initial={noMotion ? false : { opacity: 0, y: 12, scale: 0.99 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.99 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                className="pointer-events-auto"
+                style={{ willChange: "transform, opacity" }}
+              >
+                <BlogArticleWindow
+                  article={activeBlogArticle}
+                  active={activeWindow === "article"}
+                  onActivate={() => setActiveWindow("article")}
+                  onTitleBarPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    articleDragControls.start(event);
+                  }}
+                  onClose={closeBlogArticleWindow}
+                />
+              </m.div>
+            ) : null}
           </AnimatePresence>
         </div>
 

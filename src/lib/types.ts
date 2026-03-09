@@ -58,3 +58,13 @@ export interface AboutPanelContent {
   links: AboutPanelLink[];
   footer: string;
 }
+
+export interface BlogPreviewArticle {
+  id: string;
+  title: string;
+  publishedAt: string;
+  description: string;
+  source: string;
+  externalUrl?: string;
+  mdxContent?: string;
+}
