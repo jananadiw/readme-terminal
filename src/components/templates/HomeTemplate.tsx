@@ -66,22 +66,36 @@ export default function HomeTemplate({ blogArticles }: HomeTemplateProps) {
 
   const offsetX = useMotionValue(0);
   const offsetY = useMotionValue(0);
+  const scaleMotion = useMotionValue(INITIAL_CANVAS_SCALE);
   const smoothOffsetX = useSpring(offsetX, ZOOM_SPRING);
   const smoothOffsetY = useSpring(offsetY, ZOOM_SPRING);
+  const smoothScale = useSpring(scaleMotion, ZOOM_SPRING);
   const dragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
+  const dragPointerId = useRef<number | null>(null);
+  const touchCountRef = useRef(0);
   const gridRef = useRef<HTMLDivElement>(null);
   const panSyncRafRef = useRef<number | null>(null);
+  const scaleSyncRafRef = useRef<number | null>(null);
+  const pinchRafRef = useRef<number | null>(null);
+  const pinchPendingRef = useRef<{
+    scale: number;
+    anchor: { x: number; y: number };
+  } | null>(null);
   const latestCanvasOffsetRef = useRef({ x: 0, y: 0 });
+  const latestCanvasScaleRef = useRef(INITIAL_CANVAS_SCALE);
   const isDraggingCanvas = useRef(false);
+  const isPinchingCanvas = useRef(false);
   const smoothScaleRef = useRef(INITIAL_CANVAS_SCALE);
 
   // Pinch-to-zoom state
   const [canvasScale, setCanvasScale] = useState(INITIAL_CANVAS_SCALE);
   const canvasScaleRef = useRef(INITIAL_CANVAS_SCALE);
-  const smoothScale = useSpring(INITIAL_CANVAS_SCALE, ZOOM_SPRING);
   const pinchStartDist = useRef<number | null>(null);
   const pinchStartScale = useRef(1);
+  const [activeMobileStampTooltip, setActiveMobileStampTooltip] = useState<
+    string | null
+  >(null);
   const [showZoomIndicator, setShowZoomIndicator] = useState(false);
   const zoomIndicatorTimeout = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -116,6 +130,9 @@ export default function HomeTemplate({ blogArticles }: HomeTemplateProps) {
     isBlogOpen ||
     isBlogArticleOpen;
   const isCanvasInteractionLocked = isMobileView && isAnyWindowOpen;
+  const renderOffsetX = isMobileView ? offsetX : smoothOffsetX;
+  const renderOffsetY = isMobileView ? offsetY : smoothOffsetY;
+  const renderScale = isMobileView ? scaleMotion : smoothScale;
 
   const updateGridPosition = useCallback((x: number, y: number) => {
     if (gridRef.current) {
@@ -127,12 +144,21 @@ export default function HomeTemplate({ blogArticles }: HomeTemplateProps) {
   }, []);
 
   const scheduleCanvasOffsetSync = useCallback(() => {
-    if (isDraggingCanvas.current) return;
+    if (isDraggingCanvas.current || isPinchingCanvas.current) return;
     if (panSyncRafRef.current !== null) return;
 
     panSyncRafRef.current = requestAnimationFrame(() => {
       panSyncRafRef.current = null;
       setCanvasOffset({ ...latestCanvasOffsetRef.current });
+    });
+  }, []);
+
+  const scheduleCanvasScaleSync = useCallback(() => {
+    if (scaleSyncRafRef.current !== null) return;
+
+    scaleSyncRafRef.current = requestAnimationFrame(() => {
+      scaleSyncRafRef.current = null;
+      setCanvasScale(latestCanvasScaleRef.current);
     });
   }, []);
 
@@ -175,15 +201,17 @@ export default function HomeTemplate({ blogArticles }: HomeTemplateProps) {
       const nextY = zoomAnchor.y - anchorWorldY * clampedScale;
 
       canvasScaleRef.current = clampedScale;
-      setCanvasScale(clampedScale);
-      smoothScale.set(clampedScale);
+      latestCanvasScaleRef.current = clampedScale;
+      scheduleCanvasScaleSync();
+      scaleMotion.set(clampedScale);
       offsetX.set(nextX);
       offsetY.set(nextY);
     },
     [
       offsetX,
       offsetY,
-      smoothScale,
+      scaleMotion,
+      scheduleCanvasScaleSync,
       viewportSize.height,
       viewportSize.width,
     ],
@@ -232,8 +260,9 @@ export default function HomeTemplate({ blogArticles }: HomeTemplateProps) {
 
     updateViewport();
     canvasScaleRef.current = INITIAL_CANVAS_SCALE;
+    latestCanvasScaleRef.current = INITIAL_CANVAS_SCALE;
     smoothScaleRef.current = INITIAL_CANVAS_SCALE;
-    smoothScale.set(INITIAL_CANVAS_SCALE);
+    scaleMotion.set(INITIAL_CANVAS_SCALE);
     offsetX.set(initialX);
     offsetY.set(initialY);
     syncCanvasState(initialX, initialY);
@@ -244,45 +273,66 @@ export default function HomeTemplate({ blogArticles }: HomeTemplateProps) {
       if (panSyncRafRef.current !== null) {
         cancelAnimationFrame(panSyncRafRef.current);
       }
+      if (scaleSyncRafRef.current !== null) {
+        cancelAnimationFrame(scaleSyncRafRef.current);
+      }
       window.removeEventListener("resize", updateViewport);
     };
-  }, [offsetX, offsetY, smoothScale, syncCanvasState]);
+  }, [offsetX, offsetY, scaleMotion, syncCanvasState]);
 
-  useMotionValueEvent(smoothOffsetX, "change", (x) => {
-    syncCanvasState(x, smoothOffsetY.get());
+  useMotionValueEvent(renderOffsetX, "change", (x) => {
+    syncCanvasState(x, renderOffsetY.get());
   });
 
-  useMotionValueEvent(smoothOffsetY, "change", (y) => {
-    syncCanvasState(smoothOffsetX.get(), y);
+  useMotionValueEvent(renderOffsetY, "change", (y) => {
+    syncCanvasState(renderOffsetX.get(), y);
   });
 
-  useMotionValueEvent(smoothScale, "change", (nextScale) => {
+  useMotionValueEvent(renderScale, "change", (nextScale) => {
     smoothScaleRef.current = nextScale;
-    updateGridPosition(smoothOffsetX.get(), smoothOffsetY.get());
+    updateGridPosition(renderOffsetX.get(), renderOffsetY.get());
   });
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
-    if (e.button !== 0) return;
+    if (isMobileView) {
+      setActiveMobileStampTooltip(null);
+    }
     if (isCanvasInteractionLocked) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (e.pointerType !== "mouse" && !e.isPrimary) return;
+    if (isPinchingCanvas.current) return;
+
     dragging.current = true;
     isDraggingCanvas.current = true;
+    dragPointerId.current = e.pointerId;
     lastPos.current = { x: e.clientX, y: e.clientY };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  }, [isCanvasInteractionLocked]);
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      // Ignore pointer capture failures on browsers that transiently reject capture.
+    }
+  }, [isCanvasInteractionLocked, isMobileView]);
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
       if (!dragging.current) return;
       if (isCanvasInteractionLocked) return;
+      if (isPinchingCanvas.current || touchCountRef.current > 1) return;
+      if (dragPointerId.current !== null && e.pointerId !== dragPointerId.current)
+        return;
+
       const dx = e.clientX - lastPos.current.x;
       const dy = e.clientY - lastPos.current.y;
       lastPos.current = { x: e.clientX, y: e.clientY };
       offsetX.set(offsetX.get() + dx);
       offsetY.set(offsetY.get() + dy);
     };
-    const onUp = () => {
+    const onUp = (e: PointerEvent) => {
+      if (dragPointerId.current !== null && e.pointerId !== dragPointerId.current)
+        return;
       dragging.current = false;
       isDraggingCanvas.current = false;
+      dragPointerId.current = null;
       setCanvasOffset({ ...latestCanvasOffsetRef.current });
     };
 
@@ -301,47 +351,120 @@ export default function HomeTemplate({ blogArticles }: HomeTemplateProps) {
     const getTouchDist = (t1: Touch, t2: Touch) =>
       Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
 
+    const flushPendingPinchScale = () => {
+      pinchRafRef.current = null;
+      const pending = pinchPendingRef.current;
+      pinchPendingRef.current = null;
+
+      if (!pending) return;
+      applyCanvasScale(pending.scale, pending.anchor);
+      flashZoomIndicator();
+    };
+
     const onTouchStart = (e: TouchEvent) => {
+      touchCountRef.current = e.touches.length;
       if (isCanvasInteractionLocked) return;
+
       if (e.touches.length === 2) {
+        setActiveMobileStampTooltip(null);
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+        isPinchingCanvas.current = true;
+        dragging.current = false;
+        isDraggingCanvas.current = false;
+        dragPointerId.current = null;
         pinchStartDist.current = getTouchDist(e.touches[0], e.touches[1]);
         pinchStartScale.current = canvasScaleRef.current;
       }
     };
 
     const onTouchMove = (e: TouchEvent) => {
+      touchCountRef.current = e.touches.length;
       if (isCanvasInteractionLocked) return;
+
       if (e.touches.length === 2 && pinchStartDist.current !== null) {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
         const dist = getTouchDist(e.touches[0], e.touches[1]);
         const ratio = dist / pinchStartDist.current;
         const anchorX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
         const anchorY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-        applyCanvasScale(pinchStartScale.current * ratio, {
-          x: anchorX,
-          y: anchorY,
-        });
-        flashZoomIndicator();
+        pinchPendingRef.current = {
+          scale: pinchStartScale.current * ratio,
+          anchor: { x: anchorX, y: anchorY },
+        };
+        if (pinchRafRef.current === null) {
+          pinchRafRef.current = requestAnimationFrame(flushPendingPinchScale);
+        }
       }
     };
 
-    const onTouchEnd = () => {
-      pinchStartDist.current = null;
+    const onTouchEnd = (e: TouchEvent) => {
+      touchCountRef.current = e.touches.length;
+      if (e.touches.length < 2) {
+        if (pinchRafRef.current !== null) {
+          cancelAnimationFrame(pinchRafRef.current);
+          pinchRafRef.current = null;
+          const pending = pinchPendingRef.current;
+          pinchPendingRef.current = null;
+          if (pending) {
+            applyCanvasScale(pending.scale, pending.anchor);
+            flashZoomIndicator();
+          }
+        }
+        pinchStartDist.current = null;
+        isPinchingCanvas.current = false;
+      }
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        dragging.current = true;
+        isDraggingCanvas.current = true;
+        dragPointerId.current = null;
+        lastPos.current = { x: touch.clientX, y: touch.clientY };
+      }
+      if (e.touches.length === 0) {
+        dragging.current = false;
+        isDraggingCanvas.current = false;
+        dragPointerId.current = null;
+        setCanvasOffset({ ...latestCanvasOffsetRef.current });
+      }
     };
 
-    window.addEventListener("touchstart", onTouchStart, { passive: true });
-    window.addEventListener("touchmove", onTouchMove, { passive: true });
-    window.addEventListener("touchend", onTouchEnd, { passive: true });
-    window.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    window.addEventListener("touchstart", onTouchStart, { passive: false });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onTouchEnd, { passive: false });
+    window.addEventListener("touchcancel", onTouchEnd, { passive: false });
 
     return () => {
       window.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("touchcancel", onTouchEnd);
+      if (pinchRafRef.current !== null) {
+        cancelAnimationFrame(pinchRafRef.current);
+      }
+      pinchRafRef.current = null;
+      pinchPendingRef.current = null;
       if (zoomIndicatorTimeout.current)
         clearTimeout(zoomIndicatorTimeout.current);
     };
-  }, [applyCanvasScale, flashZoomIndicator, isCanvasInteractionLocked]);
+  }, [
+    applyCanvasScale,
+    flashZoomIndicator,
+    isCanvasInteractionLocked,
+  ]);
+
+  const handleMobileStampTooltipToggle = useCallback(
+    (stampSrc: string) => {
+      if (!isMobileView) return;
+      setActiveMobileStampTooltip((current) =>
+        current === stampSrc ? null : stampSrc,
+      );
+    },
+    [isMobileView],
+  );
 
   const handleCanvasWheel = useCallback(
     (event: React.WheelEvent<HTMLDivElement>) => {
@@ -468,7 +591,15 @@ export default function HomeTemplate({ blogArticles }: HomeTemplateProps) {
     if (!isCanvasInteractionLocked) return;
     dragging.current = false;
     isDraggingCanvas.current = false;
+    dragPointerId.current = null;
+    touchCountRef.current = 0;
+    isPinchingCanvas.current = false;
     pinchStartDist.current = null;
+    if (pinchRafRef.current !== null) {
+      cancelAnimationFrame(pinchRafRef.current);
+    }
+    pinchRafRef.current = null;
+    pinchPendingRef.current = null;
   }, [isCanvasInteractionLocked]);
 
   const focusTerminalInput = useCallback(() => {
@@ -796,9 +927,9 @@ export default function HomeTemplate({ blogArticles }: HomeTemplateProps) {
         <m.div
           className="absolute inset-0 pointer-events-none"
           style={{
-            x: smoothOffsetX,
-            y: smoothOffsetY,
-            scale: smoothScale,
+            x: renderOffsetX,
+            y: renderOffsetY,
+            scale: renderScale,
             transformOrigin: "0 0",
             willChange: "transform",
           }}
@@ -816,6 +947,11 @@ export default function HomeTemplate({ blogArticles }: HomeTemplateProps) {
               index={index}
               tooltip={STAMP_TOOLTIPS[stamp.src]}
               noMotion={noMotion}
+              isMobileView={isMobileView}
+              mobileTooltipVisible={
+                isMobileView && activeMobileStampTooltip === stamp.src
+              }
+              onMobileTooltipToggle={handleMobileStampTooltipToggle}
             />
           ))}
         </m.div>

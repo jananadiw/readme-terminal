@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useRef, useState } from "react";
 import Image from "next/image";
 import { m, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/classNames";
@@ -17,9 +17,12 @@ interface StampProps {
   index?: number;
   tooltip?: string;
   noMotion?: boolean;
+  isMobileView?: boolean;
+  mobileTooltipVisible?: boolean;
+  onMobileTooltipToggle?: (stampSrc: string) => void;
 }
 
-export default function DraggableStamp({
+function DraggableStamp({
   src,
   alt,
   x,
@@ -30,8 +33,21 @@ export default function DraggableStamp({
   index = 0,
   tooltip,
   noMotion = false,
+  isMobileView = false,
+  mobileTooltipVisible = false,
+  onMobileTooltipToggle,
 }: StampProps) {
-  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [desktopTooltipVisible, setDesktopTooltipVisible] = useState(false);
+  const touchTapStateRef = useRef<{
+    pointerId: number | null;
+    x: number;
+    y: number;
+    moved: boolean;
+  }>({ pointerId: null, x: 0, y: 0, moved: false });
+
+  const tooltipVisible = isMobileView
+    ? mobileTooltipVisible
+    : desktopTooltipVisible;
   const tooltipId = tooltip
     ? `stamp-tip-${src.replaceAll("/", "").replaceAll(".", "-")}`
     : undefined;
@@ -58,8 +74,12 @@ export default function DraggableStamp({
         zIndex,
         willChange: "transform, opacity",
       }}
-      onMouseEnter={() => setTooltipVisible(true)}
-      onMouseLeave={() => setTooltipVisible(false)}
+      onMouseEnter={() => {
+        if (!isMobileView) setDesktopTooltipVisible(true);
+      }}
+      onMouseLeave={() => {
+        if (!isMobileView) setDesktopTooltipVisible(false);
+      }}
     >
       <button
         type="button"
@@ -73,16 +93,49 @@ export default function DraggableStamp({
         )}
         onPointerDown={(e) => {
           e.stopPropagation();
-          if (e.pointerType !== "mouse") {
-            setTooltipVisible((visible) => !visible);
+          if (!isMobileView || e.pointerType === "mouse") return;
+          touchTapStateRef.current = {
+            pointerId: e.pointerId,
+            x: e.clientX,
+            y: e.clientY,
+            moved: false,
+          };
+        }}
+        onPointerMove={(e) => {
+          if (!isMobileView || e.pointerType === "mouse") return;
+          if (touchTapStateRef.current.pointerId !== e.pointerId) return;
+
+          const dx = e.clientX - touchTapStateRef.current.x;
+          const dy = e.clientY - touchTapStateRef.current.y;
+          if (Math.hypot(dx, dy) > 8) {
+            touchTapStateRef.current.moved = true;
+          }
+        }}
+        onPointerUp={(e) => {
+          e.stopPropagation();
+          if (!isMobileView || e.pointerType === "mouse") return;
+          if (touchTapStateRef.current.pointerId !== e.pointerId) return;
+
+          if (!touchTapStateRef.current.moved) {
+            onMobileTooltipToggle?.(src);
+          }
+          touchTapStateRef.current.pointerId = null;
+        }}
+        onPointerCancel={(e) => {
+          if (touchTapStateRef.current.pointerId === e.pointerId) {
+            touchTapStateRef.current.pointerId = null;
           }
         }}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
         }}
-        onFocus={() => setTooltipVisible(true)}
-        onBlur={() => setTooltipVisible(false)}
+        onFocus={() => {
+          if (!isMobileView) setDesktopTooltipVisible(true);
+        }}
+        onBlur={() => {
+          if (!isMobileView) setDesktopTooltipVisible(false);
+        }}
       >
         <Image
           src={src}
@@ -97,15 +150,19 @@ export default function DraggableStamp({
           loading="lazy"
         />
       </button>
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {tooltipVisible && tooltip && (
           <m.div
             id={tooltipId}
             role="tooltip"
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.12, ease: "easeOut" }}
+            initial={noMotion ? false : { opacity: 0, y: 6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={noMotion ? { opacity: 0 } : { opacity: 0, y: 4, scale: 0.98 }}
+            transition={
+              noMotion
+                ? { duration: 0.08, ease: "linear" }
+                : { type: "spring", stiffness: 480, damping: 34, mass: 0.62 }
+            }
             className={cn(
               "absolute left-1/2 -translate-x-1/2 mt-2 w-[220px] max-w-[calc(100vw-2rem)] px-3 py-2 text-xs sm:text-sm leading-5 text-center font-[Inconsolata] whitespace-normal pointer-events-none",
               RETRO_CLASSES.tooltip
@@ -119,3 +176,5 @@ export default function DraggableStamp({
     </m.div>
   );
 }
+
+export default memo(DraggableStamp);
