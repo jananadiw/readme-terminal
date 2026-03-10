@@ -733,6 +733,10 @@ export default function HomeTemplate({ blogArticles }: HomeTemplateProps) {
 
   const handleDockItemClick = useCallback(
     (id: DesktopDockItemId) => {
+      if (isMobileView) {
+        setActiveMobileStampTooltip(null);
+      }
+
       switch (id) {
         case "about":
           if (isAboutOpen) {
@@ -777,6 +781,7 @@ export default function HomeTemplate({ blogArticles }: HomeTemplateProps) {
       closeTerminalWindow,
       isAboutOpen,
       isBlogOpen,
+      isMobileView,
       isResumeOpen,
       isTerminalOpen,
       openAboutWindow,
@@ -860,6 +865,13 @@ export default function HomeTemplate({ blogArticles }: HomeTemplateProps) {
   }, [isAboutOpen, isBlogArticleOpen, isBlogOpen, isResumeOpen, isTerminalOpen]);
 
   const noMotion = prefersReducedMotion ?? false;
+  const activeMobileTooltipText = useMemo(() => {
+    if (!isMobileView || !activeMobileStampTooltip) {
+      return null;
+    }
+    return STAMP_TOOLTIPS[activeMobileStampTooltip] ?? null;
+  }, [activeMobileStampTooltip, isMobileView]);
+
   const visibleStamps = useMemo(() => {
     if (!stampPositions) return [];
 
@@ -918,9 +930,15 @@ export default function HomeTemplate({ blogArticles }: HomeTemplateProps) {
               ? "pointer-events-none cursor-default"
               : "cursor-grab active:cursor-grabbing",
           )}
-          style={{ touchAction: "none" }}
+          style={{
+            touchAction: "none",
+            WebkitUserSelect: "none",
+            userSelect: "none",
+            WebkitTouchCallout: "none",
+          }}
           onPointerDown={onPointerDown}
           onWheel={handleCanvasWheel}
+          onContextMenu={(event) => event.preventDefault()}
           aria-hidden="true"
         />
 
@@ -948,7 +966,7 @@ export default function HomeTemplate({ blogArticles }: HomeTemplateProps) {
               tooltip={STAMP_TOOLTIPS[stamp.src]}
               noMotion={noMotion}
               isMobileView={isMobileView}
-              mobileTooltipVisible={
+              mobileActive={
                 isMobileView && activeMobileStampTooltip === stamp.src
               }
               onMobileTooltipToggle={handleMobileStampTooltipToggle}
@@ -973,6 +991,40 @@ export default function HomeTemplate({ blogArticles }: HomeTemplateProps) {
             </div>
           </div>
         )}
+
+        <AnimatePresence>
+          {isMobileView && activeMobileTooltipText && !isAnyWindowOpen ? (
+            <m.div
+              key={activeMobileStampTooltip}
+              initial={
+                noMotion ? false : { opacity: 0, y: 12, scale: 0.97 }
+              }
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={
+                noMotion
+                  ? { opacity: 0 }
+                  : { opacity: 0, y: 8, scale: 0.985 }
+              }
+              transition={
+                noMotion
+                  ? { duration: 0.08, ease: "linear" }
+                  : { type: "spring", stiffness: 440, damping: 34, mass: 0.62 }
+              }
+              className="pointer-events-none fixed left-1/2 z-[96] w-[min(90vw,420px)] -translate-x-1/2"
+              style={{
+                bottom: "calc(env(safe-area-inset-bottom) + 5.65rem)",
+                willChange: "transform, opacity",
+              }}
+            >
+              <m.div
+                className="rounded-2xl border border-[var(--retro-border)] bg-[color-mix(in_srgb,var(--retro-surface)_92%,white_8%)] px-4 py-3 text-center font-[Inconsolata] text-[13px] leading-5 text-[var(--retro-accent-blue-text)] shadow-[0_14px_36px_rgba(17,45,232,0.18)] backdrop-blur-[6px]"
+                layout
+              >
+                {activeMobileTooltipText}
+              </m.div>
+            </m.div>
+          ) : null}
+        </AnimatePresence>
 
         <div
           className={cn(

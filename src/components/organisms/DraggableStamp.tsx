@@ -18,7 +18,7 @@ interface StampProps {
   tooltip?: string;
   noMotion?: boolean;
   isMobileView?: boolean;
-  mobileTooltipVisible?: boolean;
+  mobileActive?: boolean;
   onMobileTooltipToggle?: (stampSrc: string) => void;
 }
 
@@ -34,7 +34,7 @@ function DraggableStamp({
   tooltip,
   noMotion = false,
   isMobileView = false,
-  mobileTooltipVisible = false,
+  mobileActive = false,
   onMobileTooltipToggle,
 }: StampProps) {
   const [desktopTooltipVisible, setDesktopTooltipVisible] = useState(false);
@@ -45,9 +45,7 @@ function DraggableStamp({
     moved: boolean;
   }>({ pointerId: null, x: 0, y: 0, moved: false });
 
-  const tooltipVisible = isMobileView
-    ? mobileTooltipVisible
-    : desktopTooltipVisible;
+  const tooltipVisible = !isMobileView && desktopTooltipVisible;
   const tooltipId = tooltip
     ? `stamp-tip-${src.replaceAll("/", "").replaceAll(".", "-")}`
     : undefined;
@@ -56,15 +54,27 @@ function DraggableStamp({
     <m.div
       className="absolute select-none pointer-events-auto"
       initial={noMotion ? false : { opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1, rotate: rotation }}
-      transition={{
-        duration: 0.45,
-        delay: index * 0.02,
-        ease: [0.25, 0.46, 0.45, 0.94],
+      animate={{
+        opacity: 1,
+        scale: isMobileView && mobileActive ? 1.03 : 1,
+        rotate: rotation,
       }}
-      whileHover={{
-        scale: 1.04,
-        transition: { type: "spring", stiffness: 400, damping: 25 },
+      transition={{
+        opacity: { duration: 0.34, delay: index * 0.014, ease: "easeOut" },
+        rotate: { duration: 0.36, delay: index * 0.014, ease: "easeOut" },
+        scale: { type: "spring", stiffness: 420, damping: 32, mass: 0.6 },
+      }}
+      whileHover={
+        isMobileView
+          ? undefined
+          : {
+              scale: 1.04,
+              transition: { type: "spring", stiffness: 400, damping: 25 },
+            }
+      }
+      whileTap={{
+        scale: isMobileView ? 0.985 : 0.99,
+        transition: { duration: 0.08, ease: "easeOut" },
       }}
       style={{
         width: size,
@@ -73,6 +83,9 @@ function DraggableStamp({
         top: y,
         zIndex,
         willChange: "transform, opacity",
+        WebkitUserSelect: "none",
+        userSelect: "none",
+        WebkitTouchCallout: "none",
       }}
       onMouseEnter={() => {
         if (!isMobileView) setDesktopTooltipVisible(true);
@@ -89,7 +102,8 @@ function DraggableStamp({
         className={cn(
           "block w-full h-full rounded-sm",
           RETRO_CLASSES.focusRing,
-          RETRO_CLASSES.stampFocusOffset
+          RETRO_CLASSES.stampFocusOffset,
+          "select-none touch-manipulation"
         )}
         onPointerDown={(e) => {
           e.stopPropagation();
@@ -127,6 +141,10 @@ function DraggableStamp({
           }
         }}
         onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onContextMenu={(e) => {
           e.preventDefault();
           e.stopPropagation();
         }}
